@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="machinery_model" params="frame_prefix">
+    <link
+      name="${frame_prefix}base_link">
+      <inertial>
+        <origin
+          xyz="-0.0486188894280932 0.00176816930171109 0.0909824538687765"
+          rpy="0 0 0" />
+        <mass
+          value="1.02125128151506" />
+        <inertia
+          ixx="0.00193691559351903"
+          ixy="-9.52989056741818E-06"
+          ixz="1.91831821333131E-05"
+          iyy="0.00229958159384588"
+          iyz="1.51366153024328E-05"
+          izz="0.00324574895892859" />
+      </inertial>
+      <visual>
+        <origin
+          xyz="0 0 0"
+          rpy="0 0 0" />
+        <geometry>
+          <mesh
+            filename="package://machinery_model/meshes/base_link.STL" />
+        </geometry>
+        <material
+          name="">
+          <color
+            rgba="1 1 1 1" />
+        </material>
+      </visual>
+      <collision>
+        <origin
+          xyz="0 0 0"
+          rpy="0 0 0" />
+        <geometry>
+          <mesh
+            filename="package://machinery_model/meshes/base_link.STL" />
+        </geometry>
+      </collision>
+    </link>
+    <link
+      name="${frame_prefix}link5">
+      <inertial>
+        <origin
+          xyz="-0.0448846757880798 -0.00101107764704261 3.18733754667289E-15"
+          rpy="0 0 0" />
+        <mass
+          value="0.0138533273546515" />
+        <inertia
+          ixx="4.9946239003803E-06"
+          ixy="2.17992385955861E-06"
+          ixz="-2.70827310010771E-21"
+          iyy="5.88510779675631E-06"
+          iyz="-1.20236153926518E-21"
+          izz="7.59120021026983E-06" />
+      </inertial>
+      <visual>
+        <origin
+          xyz="0 0 0"
+          rpy="0 0 0" />
+        <geometry>
+          <mesh
+            filename="package://machinery_model/meshes/link5.STL" />
+        </geometry>
+        <material
+          name="">
+          <color
+            rgba="1 1 1 1" />
+        </material>
+      </visual>
+      <collision>
+        <origin
+          xyz="0 0 0"
+          rpy="0 0 0" />
+        <geometry>
+          <mesh
+            filename="package://machinery_model/meshes/link5.STL" />
+        </geometry>
+      </collision>
+    </link>
+    <joint
+      name="${frame_prefix}joint5"
+      type="continuous">
+      <origin
+        xyz="0.243 -0.0001 0.4442"
+        rpy="1.5708 0 0" />
+      <parent
+        link="${frame_prefix}base_link" />
+      <child
+        link="${frame_prefix}link5" />
+      <axis
+        xyz="0 0 1" />
+    </joint>
+    <link
+      name="${frame_prefix}gripper_link">
+      <inertial>
+        <origin
+          xyz="-0.00615018465544423 2.99813071504701E-15 -0.0345975477100909"
+          rpy="0 0 0" />
+        <mass
+          value="0.00992961053313759" />
+        <inertia
+          ixx="2.73081671738563E-06"
+          ixy="1.30568763883768E-21"
+          ixz="-7.26870124932978E-07"
+          iyy="3.80040584061147E-06"
+          iyz="6.49275885276687E-21"
+          izz="1.7118921001945E-06" />
+      </inertial>
+      <visual>
+        <origin
+          xyz="0 0 0"
+          rpy="0 0 0" />
+        <geometry>
+          <mesh
+            filename="package://machinery_model/meshes/gripper_link.STL" />
+        </geometry>
+        <material
+          name="">
+          <color
+            rgba="1 1 1 1" />
+        </material>
+      </visual>
+      <collision>
+        <origin
+          xyz="0 0 0"
+          rpy="0 0 0" />
+        <geometry>
+          <mesh
+            filename="package://machinery_model/meshes/gripper_link.STL" />
+        </geometry>
+      </collision>
+    </link>
+    <joint
+      name="${frame_prefix}gripper_joint"
+      type="fixed">
+      <origin
+        xyz="0 -0.052359 0"
+        rpy="1.5708 0 0" />
+      <parent
+        link="${frame_prefix}link5" />
+      <child
+        link="${frame_prefix}gripper_link" />
+      <axis
+        xyz="0 0 0" />
+    </joint>
+    <link
+      name="${frame_prefix}camera_link">
+      <inertial>
+        <origin
+          xyz="-0.00588834319762738 -0.0199338840390145 -0.00042327942039525"
+          rpy="0 0 0" />
+        <mass
+          value="0.0277391536496647" />
+        <inertia
+          ixx="1.4568481744067E-05"
+          ixy="-9.0101466997833E-09"
+          ixz="1.94752696768922E-08"
+          iyy="2.44550037891407E-06"
+          iyz="6.73982517197995E-09"
+          izz="1.27747521800792E-05" />
+      </inertial>
+      <visual>
+        <origin
+          xyz="0 0 0"
+          rpy="0 0 0" />
+        <geometry>
+          <mesh
+            filename="package://machinery_model/meshes/camera_link.STL" />
+        </geometry>
+        <material
+          name="">
+          <color
+            rgba="1 1 1 1" />
+        </material>
+      </visual>
+      <collision>
+        <origin
+          xyz="0 0 0"
+          rpy="0 0 0" />
+        <geometry>
+          <mesh
+            filename="package://machinery_model/meshes/camera_link.STL" />
+        </geometry>
+      </collision>
+    </link>
+    <joint
+      name="${frame_prefix}camera_joint"
+      type="fixed">
+      <origin
+        xyz="0.37194 -0.0084171 0.45691"
+        rpy="-1.5708 1.5521 -3.1416" />
+      <parent
+        link="${frame_prefix}base_link" />
+      <child
+        link="${frame_prefix}camera_link" />
+      <axis
+        xyz="0 0 0" />
+    </joint>
+  </xacro:macro>
+</robot>

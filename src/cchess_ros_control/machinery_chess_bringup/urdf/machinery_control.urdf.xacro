@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot name="Machinery" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="machinery_control" params="origin_position frame_prefix serial_port_name">
+    <ros2_control name="MachineryRobotSystem" type="system">
+      <hardware>
+        <plugin>machinery_hardware_interface/MachineryHardwareInterface</plugin>
+        <param name="origin_position">$(arg origin_position)</param>
+        <param name="frame_prefix">$(arg frame_prefix)</param>
+        <param name="serial_port_name">$(arg serial_port_name)</param>
+<!--        <param name="baud_rate">$(arg baud_rate)</param>-->
+      </hardware>
+      <joint name="${frame_prefix}joint5">
+        <command_interface name="x_position"/>
+        <command_interface name="y_position"/>
+        <command_interface name="z_position"/>
+        <state_interface name="x_position"/>
+        <state_interface name="y_position"/>
+        <state_interface name="z_position"/>
+      </joint>
+
+      <joint name="${frame_prefix}gripper_joint">
+        <command_interface name="enable"/>
+        <state_interface name="enable"/>
+      </joint>
+    </ros2_control>
+  </xacro:macro>
+</robot>

@@ -1,0 +1,22 @@
+right:
+  controller_manager:
+    ros__parameters:
+      update_rate: 10  # Hz
+
+      # 1加载手臂位置控制器
+      cartesian_position_controller:
+        type: machinery_controller/MachineryController
+
+      # 加载吸嘴控制器
+      gripper_controller:
+        type: forward_command_controller/ForwardCommandController
+
+  cartesian_position_controller:
+    ros__parameters:
+      cartesian_joint_name: "right/joint5"
+
+  gripper_controller:
+    ros__parameters:
+      joints:
+        - "right/gripper_joint"
+      interface_name: "enable"
