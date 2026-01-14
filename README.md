@@ -14,6 +14,7 @@ pip install -r requirements.txt
 
 # 安装ros2依赖
 rosdep install -r --from-paths src --ignore-src --rosdistro $ROS_DISTRO -y
+sudo apt install ros-humble-ros2-controllers
 
 # 安装系统依赖
 sudo apt update
