@@ -18,6 +18,7 @@ rosdep install -r --from-paths src --ignore-src --rosdistro $ROS_DISTRO -y
 # 安装系统依赖
 sudo apt update
 sudo apt install libserial-dev
+sudo apt install nlohmann-json3-dev
 ```
 
 # 程序使用说明
