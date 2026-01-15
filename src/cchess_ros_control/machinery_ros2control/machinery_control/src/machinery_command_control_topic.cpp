@@ -20,7 +20,7 @@ public:
         // 参数
         this->declare_parameter("namespace","");
         namespace_ = this->get_parameter("namespace").as_string();
-        this->declare_parameter("origin_position","[234.0,0.0,444.2]");
+        this->declare_parameter("origin_position","[180.0,0.0,444.2]");
         std::string origin_position_str = this->get_parameter("origin_position").as_string();
         try
         {
@@ -29,6 +29,16 @@ public:
         }catch (const std::exception& e)
         {
             RCLCPP_ERROR(this->get_logger(),"origin_position的json格式解析错误：%s",e.what());
+        }
+        this->declare_parameter("custom_origin_position","[180.0,0.0,444.2]");
+        std::string custom_origin_position_str = this->get_parameter("custom_origin_position").as_string();
+        try
+        {
+            nlohmann::json custom_origin_position_json = nlohmann::json::parse(custom_origin_position_str);
+            custom_origin_position = custom_origin_position_json.get<std::vector<double>>();
+        }catch (const std::exception& e)
+        {
+            RCLCPP_ERROR(this->get_logger(),"custom_origin_position的json格式解析错误：%s",e.what());
         }
 
         // 订阅棋盘点位
@@ -265,18 +275,28 @@ private:
         command_msg_4.point.y = origin_position[1];
         command_msg_4.point.z = origin_position[2];
         arm_command_pub_->publish(command_msg_4);
+        rclcpp::sleep_for(std::chrono::milliseconds(1500));
+
+        // 6.返回自定义原点
+        geometry_msgs::msg::PointStamped command_msg_5;
+        command_msg_5.header.stamp = this->get_clock()->now();
+        command_msg_5.header.frame_id = namespace_+"base_link";
+        command_msg_5.point.x = custom_origin_position[0];
+        command_msg_5.point.y = custom_origin_position[1];
+        command_msg_5.point.z = custom_origin_position[2];
+        arm_command_pub_->publish(command_msg_5);
         RCLCPP_INFO(this->get_logger(), "下棋完毕，正在前往原点");
         std_msgs::msg::String qt_msg = std_msgs::msg::String();
         qt_msg.data = '['+std::string(this->get_name())+']' + "下棋完毕，正在前往原点";
         qt_debug_msg_pub->publish(qt_msg);
         rclcpp::sleep_for(std::chrono::milliseconds(1500));
 
-        // 控制吸嘴，防止出意外
+        // 7.控制吸嘴，防止出意外
         std_msgs::msg::Float64MultiArray suction_cmd;
         suction_cmd.data={0.0};
         gripper_command_pub_->publish(suction_cmd);
 
-        // 6.触发相机拍摄照片
+        // 8.触发相机拍摄照片
         std_msgs::msg::Bool triggerSignal;
         triggerSignal.data=true;
         machinery_pub_image_trigger->publish(triggerSignal);
@@ -295,6 +315,7 @@ private:
     bool is_chess_points_received;
     std::string namespace_;
     std::vector<double> origin_position;
+    std::vector<double> custom_origin_position;
 };
 
 int main(int argc, char *argv[])

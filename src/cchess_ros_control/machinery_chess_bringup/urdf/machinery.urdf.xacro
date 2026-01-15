@@ -2,7 +2,7 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="machinery">
 
     <!-- 参数 -->
-    <xacro:arg name="origin_position" default="[234.0, 0.0, 444.2]"/>
+    <xacro:arg name="origin_position" default="[180.0, 0.0, 444.2]"/>
     <xacro:arg name="frame_prefix" default=""/>
     <xacro:arg name="serial_port_name" default="/dev/ttyUSB0" />
     <!-- <xacro:arg name="baud_rate" default="115200" /> -->
