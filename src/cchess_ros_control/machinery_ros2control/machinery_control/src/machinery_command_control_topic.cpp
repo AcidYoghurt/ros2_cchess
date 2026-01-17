@@ -320,7 +320,7 @@ private:
                 command_msg.header.stamp = this->get_clock()->now();
                 command_msg.point.x = (coords[0])*1000;
                 command_msg.point.y = (coords[1])*1000;
-                command_msg.point.z = (coords[2])*1000+90;
+                command_msg.point.z = (coords[2])*1000+170;
                 control_cartesian_point(command_msg);
 
                 // 去到投放点
@@ -344,7 +344,7 @@ private:
                 command_msg.header.frame_id = namespace_+"base_link";
                 command_msg.point.x = (coords[0])*1000;
                 command_msg.point.y = (coords[1])*1000;
-                command_msg.point.z = (coords[2])*1000+20;
+                command_msg.point.z = (coords[2])*1000+170;
                 control_cartesian_point(command_msg);
             }
             else{

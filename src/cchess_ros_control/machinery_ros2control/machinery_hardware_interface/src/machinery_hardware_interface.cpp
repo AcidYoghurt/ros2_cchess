@@ -242,6 +242,7 @@ namespace machinery_hardware_interface
     hardware_interface::CallbackReturn MachineryHardwareInterface::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
     {
         // 在激活时，将硬件状态设置原点
+        // 机械臂
         hw_state_x_ = custom_origin_position[0];
         hw_state_y_ = custom_origin_position[1];
         hw_state_z_ = custom_origin_position[2];
@@ -251,6 +252,7 @@ namespace machinery_hardware_interface
         last_hw_command_x_ = 0.0;
         last_hw_command_y_ = 0.0;
         last_hw_command_z_ = 0.0;
+        // 吸嘴
         hw_state_suction_ = 0.0;
         hw_command_suction_ = hw_state_suction_;
         last_hw_command_suction_ = 1.0;
