@@ -1,4 +1,4 @@
 /**:
   ros__parameters:
-    origin_position: "[243.0, 0.0, 444.2]"
-
+    origin_position: "[180.0, 0, 444.2]"
+    custom_origin_position: "[116, -140, 211]"

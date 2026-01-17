@@ -14,7 +14,7 @@ from launch_ros.parameter_descriptions import ParameterValue
 ## 测试：
 # 发送棋盘数据：ros2 topic pub --once /chess/points_json std_msgs/msg/String "{data: '{\"A1\": [0.353, 0.0, 0.242], \"A2\": [0.353, 0.200, 0.0242] }'}"
 
-# 发送目标点：ros2 topic pub --once /ai_move_topic std_msgs/msg/String "{data: 'a1,a2,b1,b2'}"
+# 发送目标点：ros2 topic pub --once /left/ai_move_topic std_msgs/msg/String "{data: 'a1,a2,b1,b2'}"
 
 
 config_path = LaunchConfiguration("config_path")
@@ -38,7 +38,7 @@ def declare_parameters():
 
     namespace_arg = DeclareLaunchArgument(
         name='namespace',
-        default_value="none/",
+        default_value="left/",
         description="为节点和TF设置命名空间（记得命名空间后要加 / ）"
     )
 
@@ -127,12 +127,13 @@ def machinery_ros2control(context: launch.LaunchContext):
     config_path_str = LaunchConfiguration('config_path').perform(context)
     namespace_str = namespace.perform(context)
 
+    # 一些参数
     with open(config_path_str+'/'+namespace_str+'machinery.yaml', 'r', encoding='utf-8') as file:
         config_file = yaml.safe_load(file)
-
     robot_description = ParameterValue(launch.substitutions.Command([
         'xacro ', PathJoinSubstitution([LaunchConfiguration('urdf_path'), 'machinery.urdf.xacro']),
-        ' origin_position:=', '"'+str(config_file['/**']['ros__parameters']['custom_origin_position'])+'"',
+        ' origin_position:=', '"'+str(config_file['/**']['ros__parameters']['origin_position'])+'"',
+        ' custom_origin_position:=', '"'+str(config_file['/**']['ros__parameters']['custom_origin_position'])+'"',
         ' frame_prefix:=', namespace,
         ' serial_port_name:=', serial_port_name
     ]), value_type=str)
@@ -146,8 +147,8 @@ def machinery_ros2control(context: launch.LaunchContext):
         namespace=namespace,
         output="both",
         parameters=[
-            {"robot_description": robot_description},
-            robot_controllers_config
+            {"robot_description": robot_description},   # 这个参数让ros2_control知道：这个机器人“有哪些硬件 + 接口”
+            robot_controllers_config                    # 传入controller的参数
         ]
     )
 
@@ -192,7 +193,7 @@ def machinery_ros2control(context: launch.LaunchContext):
         ],
     )
 
-    return [control_node, robot_state_pub_node, cartesian_position_controller_spawner, gripper_controller_spawner]
+    return [control_node, cartesian_position_controller_spawner, gripper_controller_spawner]
 
 # 象棋位置映射节点
 def artificial_chess_corner_recognition():

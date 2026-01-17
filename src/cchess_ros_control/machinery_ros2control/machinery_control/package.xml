@@ -18,6 +18,9 @@
   <depend>machinery_msg</depend>
   <depend>tf2_ros</depend>
   <depend>tf2_geometry_msgs</depend>
+  <depend>machinery_control_msg</depend>
+  <depend>realtime_tools</depend>
+  <depend>gripper_suction_controller</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

@@ -3,20 +3,20 @@ left:
     ros__parameters:
       update_rate: 4  # Hz
 
-      # 1加载手臂位置控制器
+      # 加载手臂位置控制器
       cartesian_position_controller:
         type: machinery_controller/MachineryController
 
       # 加载吸嘴控制器
-      gripper_controller:
-        type: forward_command_controller/ForwardCommandController
+      gripper_suction_controller:
+        type: gripper_suction_controller/GripperSuctionController
 
   cartesian_position_controller:
     ros__parameters:
-      cartesian_joint_name: "left/joint5"
+      cartesian_joint_name: "left/gripper_position"
 
-  gripper_controller:
+  gripper_suction_controller:
     ros__parameters:
       joints:
-        - "left/gripper_joint"
-      interface_name: "enable"
+        - "left/gripper_suction"
+      interface_name: "position"

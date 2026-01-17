@@ -90,13 +90,13 @@ private:
 
   std::unique_ptr<LibSerial::SerialPort> serial_port_;  // 串口
   rclcpp::Logger logger_; //用于发布消息
-  std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
   // read函数中的变量
   std::string response;
 
   // 从URDF中获取的参数
   std::vector<double> origin_position;
+  std::vector<double> custom_origin_position;
   std::string frame_prefix_;
   std::string serial_port_name_;
   int baud_rate_;

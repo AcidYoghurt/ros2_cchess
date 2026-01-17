@@ -3,6 +3,7 @@
 
     <!-- 参数 -->
     <xacro:arg name="origin_position" default="[180.0, 0.0, 444.2]"/>
+    <xacro:arg name="custom_origin_position" default="[180.0, 0.0, 444.2]"/>
     <xacro:arg name="frame_prefix" default=""/>
     <xacro:arg name="serial_port_name" default="/dev/ttyUSB0" />
     <!-- <xacro:arg name="baud_rate" default="115200" /> -->
@@ -14,5 +15,5 @@
 
     <!-- 2. 调用宏并传入 frame_prefix 参数 -->
     <xacro:machinery_model frame_prefix="$(arg frame_prefix)"/>
-    <xacro:machinery_control origin_position="$(arg origin_position)" frame_prefix="$(arg frame_prefix)" serial_port_name="$(arg serial_port_name)" />
+    <xacro:machinery_control origin_position="$(arg origin_position)" custom_origin_position="$(arg custom_origin_position)" frame_prefix="$(arg frame_prefix)" serial_port_name="$(arg serial_port_name)" />
 </robot>

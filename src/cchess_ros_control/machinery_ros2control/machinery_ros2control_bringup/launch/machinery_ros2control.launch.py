@@ -26,7 +26,7 @@ serial_port_name = LaunchConfiguration("serial_port_name")
 def declare_parameters():
     serial_port_name_arg = DeclareLaunchArgument(
         name='serial_port_name',
-        default_value="/dev/MachineryA",
+        default_value="/dev/ttyUSB0",
         description="机械臂的串口名称"
     )
 
@@ -59,7 +59,8 @@ def machinery_ros2control(context: launch.LaunchContext):
 
     robot_description = ParameterValue(launch.substitutions.Command([
         'xacro ', PathJoinSubstitution([LaunchConfiguration('urdf_path'), 'machinery.urdf.xacro']),
-        ' origin_position:=', '"'+str(config_file['/**']['ros__parameters']['custom_origin_position'])+'"',
+        ' origin_position:=', '"'+str(config_file['/**']['ros__parameters']['origin_position'])+'"',
+        ' custom_origin_position:=', '"'+str(config_file['/**']['ros__parameters']['custom_origin_position'])+'"',
         ' frame_prefix:=', namespace,
         ' serial_port_name:=', serial_port_name
     ]), value_type=str)

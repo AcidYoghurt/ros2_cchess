@@ -29,6 +29,7 @@
 #include "rclcpp_lifecycle/state.hpp"
 #include "realtime_tools/realtime_box.hpp"
 #include "geometry_msgs/msg/point_stamped.hpp"
+#include "machinery_control_msg/msg/task_status.hpp"
 
 namespace machinery_controller
 {
@@ -58,8 +59,16 @@ public:
     const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
 protected:
-  realtime_tools::RealtimeBox<std::shared_ptr<CmdType>> received_command_ptr_{nullptr};
   rclcpp::Subscription<CmdType>::SharedPtr command_subscriber_ = nullptr;
+  rclcpp::Publisher<machinery_control_msg::msg::TaskStatus>::SharedPtr task_status_publisher_ = nullptr;
+
+  // 变量
+  realtime_tools::RealtimeBox<std::shared_ptr<CmdType>> received_command_ptr_{nullptr}; // 无锁、实时安全的数据交换盒，这里用于存储业务代码调用controller的数据，即要发送到串口的目标点
+  std::vector<double> last_command_interfaces_;
+  machinery_control_msg::msg::TaskStatus task_status_;
+  double epsilon;
+
+  // 参数
   std::string cartesian_joint_name_;
 };
 

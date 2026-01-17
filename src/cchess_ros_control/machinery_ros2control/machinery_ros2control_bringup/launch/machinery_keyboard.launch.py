@@ -54,8 +54,9 @@ def machinery_ros2control(context: launch.LaunchContext):
         config_file = yaml.safe_load(file)
 
     robot_description = ParameterValue(launch.substitutions.Command([
-        'xacro ', PathJoinSubstitution([LaunchConfiguration('urdf_path'), 'machinery.urdf.xacro']),
+        'xacro ', PathJoinSubstitution([LaunchConfiguration('urdf_path'), 'machinery.urdf.xacro'])+'"',
         ' origin_position:=', '"'+str(config_file['/**']['ros__parameters']['origin_position'])+'"',
+        ' custom_origin_position:=', '"'+str(config_file['/**']['ros__parameters']['custom_origin_position'])+'"',
         ' frame_prefix:=', namespace,
         ' serial_port_name:=', serial_port_name
     ]), value_type=str)

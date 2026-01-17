@@ -21,11 +21,11 @@
 #include <regex>
 #include <cmath>
 #include <nlohmann/json.hpp>
-#include <tf2/LinearMath/Quaternion.h>
 #include "machinery_hardware_interface/machinery_hardware_interface.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "rclcpp/rclcpp.hpp"
 
+// hardware_interface 是搭配 urdf文件 开发的
 namespace machinery_hardware_interface
 {
     /**
@@ -88,7 +88,7 @@ namespace machinery_hardware_interface
             return CallbackReturn::ERROR;
         }
 
-        // 从URDF中获取硬件参数
+        // 1.从URDF中获取硬件参数
         frame_prefix_ = info_.hardware_parameters["frame_prefix"];
         serial_port_name_ = info_.hardware_parameters["serial_port_name"];
         // baud_rate_ = std::stoi(info_.hardware_parameters["baud_rate"]);
@@ -101,11 +101,48 @@ namespace machinery_hardware_interface
         {
             RCLCPP_ERROR(logger_,"origin_position的json格式解析错误：%s",e.what());
         }
+        std::string custom_origin_position_str = info_.hardware_parameters["custom_origin_position"];
+        try
+        {
+            nlohmann::json custom_origin_position_json = nlohmann::json::parse(custom_origin_position_str);
+            custom_origin_position = custom_origin_position_json.get<std::vector<double>>();
+        }catch (const std::exception& e)
+        {
+            RCLCPP_ERROR(logger_,"custom_origin_position的json格式解析错误：%s",e.what());
+        }
 
-        // 初始化硬件状态/命令变量
-        hw_state_x_ = origin_position[0];
-        hw_state_y_ = origin_position[1];
-        hw_state_z_ = origin_position[2];
+        // 2.检查URDF中定义的每个接口(joint标签)的command_interface和state_interface数量是否正确
+        const hardware_interface::ComponentInfo &joint_0 = info_.joints[0];
+        if (joint_0.command_interfaces.size() != 3)
+        {
+            RCLCPP_FATAL(
+                logger_, "Joint '%s' 期望有3个command_interface，但实际有 %zu 个，请检查urdf文件！", joint_0.name.c_str(),
+                joint_0.command_interfaces.size());
+            return CallbackReturn::ERROR;
+        }
+        if (joint_0.state_interfaces.size() != 3)
+        {
+            RCLCPP_FATAL(logger_, "Joint '%s' 期望有3个state_interface，但实际有 %zu 个，请检查urdf文件！", joint_0.name.c_str(),joint_0.state_interfaces.size());
+            return CallbackReturn::ERROR;
+        }
+        const hardware_interface::ComponentInfo &joint_1 = info_.joints[1];
+        if (joint_1.command_interfaces.size() != 1)
+        {
+            RCLCPP_FATAL(
+                logger_, "Joint '%s' 期望有1个command_interface，但实际有 %zu 个，请检查urdf文件！", joint_1.name.c_str(),
+                joint_1.command_interfaces.size());
+            return CallbackReturn::ERROR;
+        }
+        if (joint_1.state_interfaces.size() != 1)
+        {
+            RCLCPP_FATAL(logger_, "Joint '%s' 期望有1个state_interface，但实际有 %zu 个，请检查urdf文件！", joint_1.name.c_str(),joint_1.state_interfaces.size());
+            return CallbackReturn::ERROR;
+        }
+
+        // 3.初始化硬件状态/命令变量
+        hw_state_x_ = custom_origin_position[0];
+        hw_state_y_ = custom_origin_position[1];
+        hw_state_z_ = custom_origin_position[2];
         hw_command_x_ = hw_state_x_;
         hw_command_y_ = hw_state_y_;
         hw_command_z_ = hw_state_z_;
@@ -115,24 +152,6 @@ namespace machinery_hardware_interface
         hw_state_suction_ = 0.0;
         hw_command_suction_ = hw_state_suction_;
         last_hw_command_suction_ = 1.0;
-
-        tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(std::make_shared<rclcpp::Node>("machinery_hardware_interface_node"));
-
-        const hardware_interface::ComponentInfo &joint = info_.joints[0];
-        // 检查URDF中定义的接口数量是否正确
-        if (joint.command_interfaces.size() != 3)
-        {
-            RCLCPP_FATAL(
-                logger_, "Joint '%s' has %zu command interfaces found. 3 expected.", joint.name.c_str(),
-                joint.command_interfaces.size());
-            return CallbackReturn::ERROR;
-        }
-
-        if (joint.state_interfaces.size() != 3)
-        {
-            RCLCPP_FATAL(logger_, "Joint '%s' has %zu state interfaces found. 3 expected.", joint.name.c_str(),joint.state_interfaces.size());
-            return CallbackReturn::ERROR;
-        }
 
         return CallbackReturn::SUCCESS;
     }
@@ -172,15 +191,19 @@ namespace machinery_hardware_interface
     {
         std::vector<hardware_interface::StateInterface> state_interfaces;
 
-        // Correctly export the three Cartesian state interfaces
-        state_interfaces.emplace_back(hardware_interface::StateInterface(
-            info_.joints[0].name, "x_position", &hw_state_x_));
-        state_interfaces.emplace_back(hardware_interface::StateInterface(
-            info_.joints[0].name, "y_position", &hw_state_y_));
-        state_interfaces.emplace_back(hardware_interface::StateInterface(
-            info_.joints[0].name, "z_position", &hw_state_z_));
-        state_interfaces.emplace_back(hardware_interface::StateInterface(
-            info_.joints[1].name, "enable", &hw_state_suction_));
+        for (const auto & joint : info_.joints)
+        {
+            if (joint.name == frame_prefix_ + "gripper_position")
+            {
+                state_interfaces.emplace_back(joint.name, "x_position", &hw_state_x_);
+                state_interfaces.emplace_back(joint.name, "y_position", &hw_state_y_);
+                state_interfaces.emplace_back(joint.name, "z_position", &hw_state_z_);
+            }
+            else if (joint.name == frame_prefix_ + "gripper_suction")
+            {
+                state_interfaces.emplace_back(joint.name, "position", &hw_state_suction_);
+            }
+        }
 
         return state_interfaces;
     }
@@ -194,15 +217,19 @@ namespace machinery_hardware_interface
     {
         std::vector<hardware_interface::CommandInterface> command_interfaces;
 
-        // Correctly export the three Cartesian command interfaces
-        command_interfaces.emplace_back(hardware_interface::CommandInterface(
-            info_.joints[0].name, "x_position", &hw_command_x_));
-        command_interfaces.emplace_back(hardware_interface::CommandInterface(
-            info_.joints[0].name, "y_position", &hw_command_y_));
-        command_interfaces.emplace_back(hardware_interface::CommandInterface(
-            info_.joints[0].name, "z_position", &hw_command_z_));
-        command_interfaces.emplace_back(hardware_interface::CommandInterface(
-            info_.joints[1].name, "enable", &hw_command_suction_));
+        for (const auto & joint : info_.joints)
+        {
+            if (joint.name == frame_prefix_ + "gripper_position")
+            {
+                command_interfaces.emplace_back(joint.name, "x_position", &hw_command_x_);
+                command_interfaces.emplace_back(joint.name, "y_position", &hw_command_y_);
+                command_interfaces.emplace_back(joint.name, "z_position", &hw_command_z_);
+            }
+            else if (joint.name == frame_prefix_ + "gripper_suction")
+            {
+                command_interfaces.emplace_back(joint.name, "position", &hw_command_suction_);
+            }
+        }
 
         return command_interfaces;
     }
@@ -215,9 +242,9 @@ namespace machinery_hardware_interface
     hardware_interface::CallbackReturn MachineryHardwareInterface::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
     {
         // 在激活时，将硬件状态设置原点
-        hw_state_x_ = origin_position[0];
-        hw_state_y_ = origin_position[1];
-        hw_state_z_ = origin_position[2];
+        hw_state_x_ = custom_origin_position[0];
+        hw_state_y_ = custom_origin_position[1];
+        hw_state_z_ = custom_origin_position[2];
         hw_command_x_ = hw_state_x_;
         hw_command_y_ = hw_state_y_;
         hw_command_z_ = hw_state_z_;
@@ -242,11 +269,6 @@ namespace machinery_hardware_interface
         serial_port_->Write(suction_command);
         serial_port_->DrainWriteBuffer();
         rclcpp::sleep_for(std::chrono::milliseconds(1000));
-        // std::string arm_command = "DescartesPoint_" + std::to_string(origin_position[0]) + "," +
-        //                             std::to_string(origin_position[1]) + "," +
-        //                             std::to_string(origin_position[2]) + "," + "100";
-        // serial_port_->Write(arm_command);
-        // serial_port_->DrainWriteBuffer();
 
         // 关闭串口
         if (serial_port_ && serial_port_->IsOpen())
@@ -275,7 +297,18 @@ namespace machinery_hardware_interface
             RCLCPP_INFO(logger_, "串口返回数据：%s",response.c_str());
 
             double x = 0, y = 0, z = 0, suction = 0.0;
-            if (!response.empty() && sscanf(response.c_str(),"DescartesPointOffset: %lfmm(X), %lfmm(Y), %lfmm(Z)\r\n",&x, &y, &z) == 3) {
+            if (response.find("Origin: 3 motors return origin OK") != std::string::npos)
+            {
+                hw_state_x_ = origin_position[0];
+                hw_state_y_ = origin_position[1];
+                hw_state_z_ = origin_position[2];
+
+                // 更新上一次发送的值
+                last_hw_command_x_ = hw_state_x_;
+                last_hw_command_y_ = hw_state_y_;
+                last_hw_command_z_ = hw_state_z_;
+            }
+            else if (!response.empty() && sscanf(response.c_str(),"DescartesPointOffset: %lfmm(X), %lfmm(Y), %lfmm(Z)\r\n",&x, &y, &z) == 3) {
               hw_state_x_ = x;
               hw_state_y_ = y;
               hw_state_z_ = z;
@@ -284,7 +317,8 @@ namespace machinery_hardware_interface
               last_hw_command_y_ = hw_state_y_;
               last_hw_command_z_ = hw_state_z_;
               // RCLCPP_INFO(logger_, "返回笛卡尔积坐标：%f, %f, %f", hw_state_x_, hw_state_y_, hw_state_z_);
-            } else if (!response.empty() && sscanf(response.c_str(), "Suction: %lf\r\n", &suction) == 1) {
+            }
+            else if (!response.empty() && sscanf(response.c_str(), "Suction: %lf\r\n", &suction) == 1) {
               hw_state_suction_ = suction;
 
               // 更新上一次发送的值
@@ -302,38 +336,6 @@ namespace machinery_hardware_interface
                 RCLCPP_ERROR(logger_, "读取串口出错: %s", e.what());
             }
         }
-
-        // 发布TF
-        geometry_msgs::msg::TransformStamped t;
-        t.header.stamp = rclcpp::Clock().now();
-        t.header.frame_id = frame_prefix_+"base_link";
-        t.child_frame_id = frame_prefix_+"link5";
-        t.transform.translation.x = hw_state_x_ / 1000;
-        t.transform.translation.y = hw_state_y_ / 1000;
-        t.transform.translation.z = hw_state_z_ / 1000;
-
-        // 绕X旋转90度
-        tf2::Quaternion base_rotation;
-        base_rotation.setX(0.707);
-        base_rotation.setY(0.0);
-        base_rotation.setZ(0.0);
-        base_rotation.setW(0.707);
-
-        // 绕Y旋转...度
-        double radians = std::atan2(t.transform.translation.y, t.transform.translation.x);
-        tf2::Quaternion y_rotation;
-        y_rotation.setRPY(0, radians, 0);
-
-        // 四元数相乘
-        tf2::Quaternion final_rotation = base_rotation * y_rotation;
-
-        // 最终的rotation
-        t.transform.rotation.x = final_rotation.x();
-        t.transform.rotation.y = final_rotation.y();
-        t.transform.rotation.z = final_rotation.z();
-        t.transform.rotation.w = final_rotation.w();
-
-        tf_broadcaster_->sendTransform(t);
         return hardware_interface::return_type::OK;
     }
 
@@ -344,7 +346,6 @@ namespace machinery_hardware_interface
     hardware_interface::return_type MachineryHardwareInterface::write(
         const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
     {
-        // TODO(anyone): write robot's commands'
         try
         {
             if (!serial_port_ || !serial_port_->IsOpen())
@@ -356,7 +357,21 @@ namespace machinery_hardware_interface
             const double epsilon = 1e-6;
 
             // 发送控制模式指令
-            if (std::abs(hw_command_x_ - last_hw_command_x_) > epsilon ||
+            // 回原点
+            if ((std::abs(hw_command_x_ - origin_position[0]) < epsilon ||
+                std::abs(hw_command_y_ - origin_position[1]) < epsilon ||
+                std::abs(hw_command_z_ - origin_position[2]) < epsilon) &&
+                (std::abs(hw_command_x_ - last_hw_command_x_) > epsilon ||
+                std::abs(hw_command_y_ - last_hw_command_y_) > epsilon ||
+                std::abs(hw_command_z_ - last_hw_command_z_) > epsilon))
+            {
+                RCLCPP_INFO(logger_, "指令变化，回归原点！");
+                std::string arm_command = "Origin";
+                serial_port_->Write(arm_command);
+                serial_port_->DrainWriteBuffer();
+            }
+            // 去其他点
+            else if (std::abs(hw_command_x_ - last_hw_command_x_) > epsilon ||
                 std::abs(hw_command_y_ - last_hw_command_y_) > epsilon ||
                 std::abs(hw_command_z_ - last_hw_command_z_) > epsilon)
             {

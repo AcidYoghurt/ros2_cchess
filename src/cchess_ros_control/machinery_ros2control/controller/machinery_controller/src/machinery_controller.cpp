@@ -25,6 +25,7 @@
 #include "controller_interface/helpers.hpp"
 #include "pluginlib/class_list_macros.hpp"
 
+// controller 是搭配 yaml文件 开发的
 namespace machinery_controller
 {
 MachineryController::MachineryController() : controller_interface::ControllerInterface() {}
@@ -42,16 +43,23 @@ controller_interface::CallbackReturn MachineryController::on_configure(
   // 获取参数
   cartesian_joint_name_ = get_node()->get_parameter("cartesian_joint_name").as_string();
   if (cartesian_joint_name_.empty()) {
-    RCLCPP_ERROR(get_node()->get_logger(), "'cartesian_joint_name' parameter was not set.");
+    RCLCPP_ERROR(get_node()->get_logger(), "'cartesian_joint_name'参数没有设置");
     return CallbackReturn::ERROR;
   }
 
-  // 创建订阅者，接收目标点
+  // 创建 Pub 和 Sub
   command_subscriber_ = get_node()->create_subscription<CmdType>(
     "~/command", rclcpp::SystemDefaultsQoS(),
     [this](const CmdType::SharedPtr msg) { received_command_ptr_.set(msg); });
+  task_status_publisher_ = get_node()->create_publisher<machinery_control_msg::msg::TaskStatus>("~/task_status",10);
 
-  RCLCPP_INFO(get_node()->get_logger(), "Configure success");
+  // 初始化变量
+  last_command_interfaces_ = std::vector<double>(3);
+  task_status_.header.frame_id = this->get_node()->get_name();
+  task_status_.is_idle = true;
+  epsilon = 1e-6;
+
+  RCLCPP_INFO(get_node()->get_logger(), "配置成功");
   return CallbackReturn::SUCCESS;
 }
 
@@ -99,22 +107,29 @@ controller_interface::CallbackReturn MachineryController::on_deactivate(
 controller_interface::return_type MachineryController::update(
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
-  // 声明一个共享指针来接收命令
+  // 接收 业务代码 -> controller的数据，即要发送到串口的目标点
   std::shared_ptr<CmdType> command;
-  // 通过引用获取 RealtimeBox 中的数据
   received_command_ptr_.get(command);
+  if (!command) return controller_interface::return_type::OK; // 如果指针为空，说明还未收到任何命令
 
-  if (!command) {
-    // 如果指针为空，说明还未收到任何命令
-    return controller_interface::return_type::OK;
-  }
+  // 接收 hardware_interface -> controller的数据，即串口返回的已到达的点
+  if (std::abs(last_command_interfaces_[0] - state_interfaces_[0].get_value()) > epsilon ||
+      std::abs(last_command_interfaces_[1] - state_interfaces_[1].get_value()) > epsilon ||
+      std::abs(last_command_interfaces_[2] - state_interfaces_[2].get_value()) > epsilon)
+    task_status_.is_idle = false;
+  else
+    task_status_.is_idle = true;
+  task_status_.header.stamp = this->get_node()->now();
+  task_status_publisher_->publish(task_status_);
 
   // 将命令写入硬件接口
   // command_interfaces_ 的顺序与 command_interface_configuration() 中定义的顺序一致
   command_interfaces_[0].set_value(command->point.x);
   command_interfaces_[1].set_value(command->point.y);
   command_interfaces_[2].set_value(command->point.z);
-
+  // 更新last_command_interfaces_的值
+  for (int i =0;i<3;i++)
+    last_command_interfaces_[i] = command_interfaces_[i].get_value();
 
   return controller_interface::return_type::OK;
 }
