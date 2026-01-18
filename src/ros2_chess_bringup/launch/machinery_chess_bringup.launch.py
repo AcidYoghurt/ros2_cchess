@@ -16,6 +16,7 @@ namespace = LaunchConfiguration('namespace')
 serial_port_name = LaunchConfiguration('serial_port_name')
 config_path = LaunchConfiguration('config_path')
 urdf_path = LaunchConfiguration('urdf_path')
+baud_rate = LaunchConfiguration("baud_rate")
 
 # 声明参数
 def declare_parameters():
@@ -43,7 +44,13 @@ def declare_parameters():
         description="机械臂的串口名称"
     )
 
-    return [config_path_arg, urdf_path_arg, namespace_arg, serial_port_name_arg]
+    baud_rate_arg = DeclareLaunchArgument(
+        name='baud_rate',
+        default_value="115200",
+        description="机械臂的串口波特率"
+    )
+
+    return [config_path_arg, urdf_path_arg, namespace_arg, serial_port_name_arg, baud_rate_arg]
 
 # 节点
 def cchess_ros_control():
@@ -60,6 +67,7 @@ def cchess_ros_control():
             'serial_port_name': serial_port_name,
             'config_path': config_path,
             'urdf_path': urdf_path,
+            'baud_rate': baud_rate,
         }.items()
     )
     return [cchess_ros_control_launch]

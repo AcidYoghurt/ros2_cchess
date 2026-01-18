@@ -21,6 +21,7 @@
 #include <regex>
 #include <cmath>
 #include <nlohmann/json.hpp>
+#include "machinery_hardware_interface/tool.hpp"
 #include "machinery_hardware_interface/machinery_hardware_interface.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -57,7 +58,7 @@ namespace machinery_hardware_interface
             try
             {
                 serial_port_->Open(serial_port_name_);
-                serial_port_->SetBaudRate(LibSerial::BaudRate::BAUD_115200);
+                serial_port_->SetBaudRate(baud_rate_);
                 serial_port_->SetCharacterSize(LibSerial::CharacterSize::CHAR_SIZE_8);
                 serial_port_->SetFlowControl(LibSerial::FlowControl::FLOW_CONTROL_NONE);
                 serial_port_->SetParity(LibSerial::Parity::PARITY_NONE);
@@ -91,7 +92,9 @@ namespace machinery_hardware_interface
         // 1.从URDF中获取硬件参数
         frame_prefix_ = info_.hardware_parameters["frame_prefix"];
         serial_port_name_ = info_.hardware_parameters["serial_port_name"];
-        // baud_rate_ = std::stoi(info_.hardware_parameters["baud_rate"]);
+        baud_rate_ = intToBaudRate(std::stoi(info_.hardware_parameters["baud_rate"]));
+        RCLCPP_INFO(logger_, "串口端口号：%s", serial_port_name_.c_str());
+        RCLCPP_INFO(logger_, "串口波特率：%s", info_.hardware_parameters["baud_rate"].c_str());
         std::string origin_position_str = info_.hardware_parameters["origin_position"];
         try
         {
@@ -167,7 +170,7 @@ namespace machinery_hardware_interface
         try
         {
             serial_port_->Open(serial_port_name_);
-            serial_port_->SetBaudRate(LibSerial::BaudRate::BAUD_115200);
+            serial_port_->SetBaudRate(baud_rate_);
             serial_port_->SetCharacterSize(LibSerial::CharacterSize::CHAR_SIZE_8);
             serial_port_->SetFlowControl(LibSerial::FlowControl::FLOW_CONTROL_NONE);
             serial_port_->SetParity(LibSerial::Parity::PARITY_NONE);

@@ -11,7 +11,7 @@
         <param name="custom_origin_position">$(arg custom_origin_position)</param>
         <param name="frame_prefix">$(arg frame_prefix)</param>
         <param name="serial_port_name">$(arg serial_port_name)</param>
-<!--        <param name="baud_rate">$(arg baud_rate)</param>-->
+        <param name="baud_rate">$(arg baud_rate)</param>
       </hardware>
 
       <!-- 声明 hardware_interface的接口 -->

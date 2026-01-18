@@ -1,8 +1,7 @@
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PointStamped
+from control_msgs.msg import JointJog
 from std_msgs.msg import String
-import tf2_ros
 import sys
 import select
 import tty
@@ -20,7 +19,7 @@ class MachineryKeypointDebug(Node):
         self.namespace_ = self.get_parameter('namespace').get_parameter_value().string_value
         self.declare_parameter('points_to_move',"['a0','a9','i0','i9']")
         self.points_to_move = self.get_parameter('points_to_move').get_parameter_value().string_value
-        self.declare_parameter('origin_position','[243.0, 0.0, 444.2]')
+        self.declare_parameter('origin_position','[180.0, 0.0, 444.2]')
         origin_position_str = self.get_parameter('origin_position').get_parameter_value().string_value
         self.origin_position = ast.literal_eval(origin_position_str)  # 转换为列表
 
@@ -33,9 +32,7 @@ class MachineryKeypointDebug(Node):
         self.is_chess_points_received = False
 
         # 发布者和接收者
-        self.tf_buffer = tf2_ros.Buffer()
-        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
-        self.publisher_ = self.create_publisher(PointStamped,'cartesian_position_controller/command',10)
+        self.publisher_ = self.create_publisher(JointJog,'cartesian_position_controller/reference',10)
         self.chess_points_json_subscriber_ = self.create_subscription(String,'chess/points_json',self.chess_points_json_callback,10)
         self.timer = self.create_timer(1,self.run)
 
@@ -187,12 +184,11 @@ class MachineryKeypointDebug(Node):
             self.get_logger().info('未接收棋盘点位')
 
     def publish_target(self):
-        point_msg = PointStamped()
+        point_msg = JointJog()
         point_msg.header.stamp = self.get_clock().now().to_msg()
-        point_msg.header.frame_id = self.namespace_+'base_link'  # 或者您的机器人基座标系
-        point_msg.point.x = float(self.target_x)
-        point_msg.point.y = float(self.target_y)
-        point_msg.point.z = float(self.target_z)
+        point_msg.header.frame_id = self.namespace_+'base_link'
+        point_msg.joint_names = [self.namespace_+'gripper_position']
+        point_msg.displacements = [float(self.target_x),float(self.target_y),float(self.target_z)]
         self.publisher_.publish(point_msg)
         self.get_logger().info(f"发送目标 {self.current_point}: X={self.target_x:.2f}, Y={self.target_y:.2f}, Z={self.target_z:.2f}")
 

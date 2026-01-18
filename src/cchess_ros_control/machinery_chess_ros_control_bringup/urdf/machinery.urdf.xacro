@@ -6,7 +6,7 @@
     <xacro:arg name="custom_origin_position" default="[180.0, 0.0, 444.2]"/>
     <xacro:arg name="frame_prefix" default=""/>
     <xacro:arg name="serial_port_name" default="/dev/ttyUSB0" />
-    <!-- <xacro:arg name="baud_rate" default="115200" /> -->
+    <xacro:arg name="baud_rate" default="115200" />
 
     <!-- urdf和xacro文件 -->
     <!-- 1. 包含定义了宏的文件 -->
