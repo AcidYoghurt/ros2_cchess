@@ -10,19 +10,26 @@ from launch_ros.parameter_descriptions import ParameterValue
 
 # 该模块用来测试 机械臂是否能够到达棋盘点位
 
-# 测试：ros2 launch machinery_ros2control_bringup machinery_keypoint_debug.launch.py serial_port_name:=/dev/MachineryA namespace:=left/
+# 测试：ros2 launch machinery_ros2control_bringup machinery_keyboard.launch.py serial_port_name:=/dev/ttyUSB0 namespace:=left/ baud_rate:=115200
 
 config_path = LaunchConfiguration("config_path")
 urdf_path = LaunchConfiguration("urdf_path")
 serial_port_name = LaunchConfiguration("serial_port_name")
+baud_rate = LaunchConfiguration("baud_rate")
 namespace = LaunchConfiguration("namespace")
 
 # 声明参数
 def declare_parameters():
     serial_port_name_arg = DeclareLaunchArgument(
         name='serial_port_name',
-        default_value="/dev/MachineryA",
+        default_value="/dev/USB0",
         description="机械臂的串口名称"
+    )
+
+    baud_rate_arg = DeclareLaunchArgument(
+        name='baud_rate',
+        default_value="115200",
+        description="机械臂的串口波特率"
     )
 
     namespace_arg = DeclareLaunchArgument(
@@ -42,7 +49,7 @@ def declare_parameters():
         default_value=str(os.path.join(get_package_share_directory('machinery_ros2control_bringup'),'urdf')),
         description='URDF文件夹 的 路径'
     )
-    return [config_path_arg, urdf_path_arg, namespace_arg, serial_port_name_arg]
+    return [config_path_arg, urdf_path_arg, namespace_arg, serial_port_name_arg, baud_rate_arg]
 
 # ros2control节点
 def machinery_ros2control(context: launch.LaunchContext):
@@ -50,18 +57,19 @@ def machinery_ros2control(context: launch.LaunchContext):
     config_path_str = LaunchConfiguration('config_path').perform(context)
     namespace_str = namespace.perform(context)
 
-    with open(config_path_str+'/'+namespace_str+'machinery.yaml', 'r', encoding='utf-8') as file:
+    with open(config_path_str+'/machinery/'+namespace_str+'machinery.yaml', 'r', encoding='utf-8') as file:
         config_file = yaml.safe_load(file)
 
     robot_description = ParameterValue(launch.substitutions.Command([
-        'xacro ', PathJoinSubstitution([LaunchConfiguration('urdf_path'), 'machinery.urdf.xacro'])+'"',
+        'xacro ', PathJoinSubstitution([LaunchConfiguration('urdf_path'), 'machinery.urdf.xacro']),
         ' origin_position:=', '"'+str(config_file['/**']['ros__parameters']['origin_position'])+'"',
         ' custom_origin_position:=', '"'+str(config_file['/**']['ros__parameters']['custom_origin_position'])+'"',
         ' frame_prefix:=', namespace,
-        ' serial_port_name:=', serial_port_name
+        ' serial_port_name:=', serial_port_name,
+        ' baud_rate:=',baud_rate
     ]), value_type=str)
-    robot_controllers_config = PathJoinSubstitution([config_path, namespace, 'machinery_controllers.yaml'])
-    rviz_config = PathJoinSubstitution([config_path, namespace, 'urdf.rviz'])
+    robot_controllers_config = PathJoinSubstitution([config_path, 'machinery', namespace, 'machinery_controllers.yaml'])
+    rviz_config = PathJoinSubstitution([config_path, 'machinery', namespace, 'urdf.rviz'])
 
     # 启动 ros2_control
     control_node = Node(
@@ -70,8 +78,8 @@ def machinery_ros2control(context: launch.LaunchContext):
         namespace=namespace,
         output="both",
         parameters=[
-            {"robot_description": robot_description},
-            robot_controllers_config
+            {"robot_description": robot_description},   # 这个参数让ros2_control知道：这个机器人“有哪些硬件 + 接口”
+            robot_controllers_config                    # 传入controller的参数
         ]
     )
 
@@ -100,7 +108,7 @@ def machinery_ros2control(context: launch.LaunchContext):
         package="controller_manager",
         executable="spawner",
         namespace=namespace,
-        arguments=["gripper_controller", "-c", "controller_manager"],
+        arguments=["gripper_suction_controller", "-c", "controller_manager"],
         output="both",
     )
 
@@ -120,7 +128,7 @@ def machinery_ros2control(context: launch.LaunchContext):
 
 # 键盘节点
 def machinery_keypoint():
-    machinery_config = PathJoinSubstitution([config_path,namespace,'machinery.yaml'])
+    machinery_config = PathJoinSubstitution([config_path,'machinery',namespace,'machinery.yaml'])
     
     machinery_keyboard_node = Node(
         package="machinery_keyboard_control",

@@ -76,10 +76,8 @@ public:
             "cartesian_position_controller/reference", 10);
 
         // 发布吸嘴控制指令
-        // gripper_command_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
-        //     "gripper_controller/commands", 10);
         gripper_command_pub_ = this->create_publisher<gripper_suction_controller::GripperSuctionController::ControllerReferenceMsg>(
-            "gripper_controller/reference", 10);
+            "gripper_suction_controller/reference", 10);
 
         // 触发器
         machinery_pub_image_trigger = this->create_publisher<std_msgs::msg::Bool>(
@@ -92,7 +90,7 @@ public:
         // 接收机械臂状态
         arm_status_sub_.subscribe(this,"cartesian_position_controller/state");
         // 接收吸嘴状态
-        gripper_status_sub_.subscribe(this,"gripper_controller/state");
+        gripper_status_sub_.subscribe(this,"gripper_suction_controller/state");
         sync_ = std::make_shared<message_filters::Synchronizer<SyncPolicy>>(SyncPolicy(10),arm_status_sub_,gripper_status_sub_);
         sync_->registerCallback(std::bind(&MachineryCommandControlNode::task_status_callback,this,std::placeholders::_1,std::placeholders::_2));
 

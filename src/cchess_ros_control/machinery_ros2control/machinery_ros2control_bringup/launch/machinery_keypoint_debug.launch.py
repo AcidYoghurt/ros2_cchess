@@ -16,6 +16,7 @@ config_path = LaunchConfiguration("config_path")
 urdf_path = LaunchConfiguration("urdf_path")
 serial_port_name = LaunchConfiguration("serial_port_name")
 namespace = LaunchConfiguration("namespace")
+baud_rate = LaunchConfiguration("baud_rate")
 
 # 声明参数
 def declare_parameters():
@@ -31,18 +32,25 @@ def declare_parameters():
         description='URDF文件夹 的 路径'
     )
 
+    namespace_arg = DeclareLaunchArgument(
+        name='namespace',
+        default_value="left/",
+        description="为节点和TF设置命名空间"
+    )
+
     serial_port_name_arg = DeclareLaunchArgument(
         name='serial_port_name',
-        default_value="/dev/MachineryA",
+        default_value="/dev/ttyUSB0",
         description="机械臂的串口名称"
     )
 
-    namespace_arg = DeclareLaunchArgument(
-        name='namespace',
-        default_value="right/",
-        description="为节点和TF设置命名空间"
+    baud_rate_arg = DeclareLaunchArgument(
+        name='baud_rate',
+        default_value="115200",
+        description="机械臂的串口波特率"
     )
-    return [config_path_arg, urdf_path_arg, namespace_arg, serial_port_name_arg]
+
+    return [config_path_arg, urdf_path_arg, namespace_arg, serial_port_name_arg, baud_rate_arg]
 
 # ros2control节点
 def machinery_ros2control(context: launch.LaunchContext):
@@ -50,17 +58,18 @@ def machinery_ros2control(context: launch.LaunchContext):
     config_path_str = LaunchConfiguration('config_path').perform(context)
     namespace_str = namespace.perform(context)
 
-    with open(config_path_str+'/'+namespace_str+'machinery.yaml', 'r', encoding='utf-8') as file:
+    with open(config_path_str+'/machinery/'+namespace_str+'machinery.yaml', 'r', encoding='utf-8') as file:
         config_file = yaml.safe_load(file)
 
     robot_description = ParameterValue(launch.substitutions.Command([
         'xacro ', PathJoinSubstitution([LaunchConfiguration('urdf_path'), 'machinery.urdf.xacro']),
         ' origin_position:=', '"'+str(config_file['/**']['ros__parameters']['origin_position'])+'"',
         ' frame_prefix:=', namespace,
-        ' serial_port_name:=', serial_port_name
+        ' serial_port_name:=', serial_port_name,
+        ' baud_rate:=',baud_rate
     ]), value_type=str)
-    robot_controllers_config = PathJoinSubstitution([config_path, namespace, 'machinery_controllers.yaml'])
-    rviz_config = PathJoinSubstitution([config_path, namespace, 'urdf.rviz'])
+    robot_controllers_config = PathJoinSubstitution([config_path, 'machinery', namespace, 'machinery_controllers.yaml'])
+    rviz_config = PathJoinSubstitution([config_path, 'machinery', namespace, 'urdf.rviz'])
 
     # 启动 ros2_control
     control_node = Node(
@@ -99,7 +108,7 @@ def machinery_ros2control(context: launch.LaunchContext):
         package="controller_manager",
         executable="spawner",
         namespace=namespace,
-        arguments=["gripper_controller", "-c", "controller_manager"],
+        arguments=["gripper_suction_controller", "-c", "controller_manager"],
         output="both",
     )
 
@@ -119,9 +128,9 @@ def machinery_ros2control(context: launch.LaunchContext):
 
 # 关键点节点
 def machinery_keypoint():
-    position_csv_path = PathJoinSubstitution([config_path,namespace,'position.csv'])
-    points_to_move_config = PathJoinSubstitution([config_path,namespace,'points_to_move.yaml'])
-    machinery_config = PathJoinSubstitution([config_path,namespace,'machinery.yaml'])
+    position_csv_path = PathJoinSubstitution([config_path, 'machinery', namespace,'position.csv'])
+    points_to_move_config = PathJoinSubstitution([config_path, 'machinery', namespace,'points_to_move.yaml'])
+    machinery_config = PathJoinSubstitution([config_path, 'machinery',namespace,'machinery.yaml'])
 
     artificial_chess_corner_recognition_node = Node(
         package='chess_corner_recognition',

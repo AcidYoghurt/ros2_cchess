@@ -24,7 +24,7 @@ config_path = LaunchConfiguration("config_path")
 urdf_path = LaunchConfiguration("urdf_path")
 namespace = LaunchConfiguration("namespace")
 serial_port_name = LaunchConfiguration("serial_port_name")
-
+baud_rate = LaunchConfiguration("baud_rate")
 
 # 声明参数
 def declare_parameters():
@@ -32,6 +32,12 @@ def declare_parameters():
         name='serial_port_name',
         default_value="/dev/ttyUSB0",
         description="机械臂的串口名称"
+    )
+
+    baud_rate_arg = DeclareLaunchArgument(
+        name='baud_rate',
+        default_value="115200",
+        description="机械臂的串口波特率"
     )
 
     namespace_arg = DeclareLaunchArgument(
@@ -42,17 +48,17 @@ def declare_parameters():
 
     urdf_path_arg = DeclareLaunchArgument(
         name='urdf_path',
-        default_value=str(get_package_share_directory('machinery_ros2control_bringup')+'/urdf'),
+        default_value=str(os.path.join(get_package_share_directory('machinery_ros2control_bringup'),'urdf')),
         description='URDF 的绝对路径'
     )
 
     config_path_arg = DeclareLaunchArgument(
         name='config_path',
-        default_value=str(get_package_share_directory('machinery_ros2control_bringup')+'/config'),
+        default_value=str(os.path.join(get_package_share_directory('machinery_ros2control_bringup'),'config')),
         description='config 的绝对路径'
     )
 
-    return [config_path_arg, urdf_path_arg, namespace_arg, serial_port_name_arg]
+    return [config_path_arg, urdf_path_arg, namespace_arg, serial_port_name_arg, baud_rate_arg]
 
 # 节点
 def machinery_ros2control(context: launch.LaunchContext):
@@ -68,9 +74,10 @@ def machinery_ros2control(context: launch.LaunchContext):
         ' origin_position:=', '"'+str(config_file['/**']['ros__parameters']['origin_position'])+'"',
         ' custom_origin_position:=', '"'+str(config_file['/**']['ros__parameters']['custom_origin_position'])+'"',
         ' frame_prefix:=', namespace,
-        ' serial_port_name:=', serial_port_name
+        ' serial_port_name:=', serial_port_name,
+        ' baud_rate:=',baud_rate
     ]), value_type=str)
-    robot_controllers_config = PathJoinSubstitution([config_path, '/machinery/', namespace, 'machinery_controllers.yaml'])
+    robot_controllers_config = PathJoinSubstitution([config_path, 'machinery', namespace, 'machinery_controllers.yaml'])
     rviz_config = PathJoinSubstitution([config_path, namespace, 'urdf.rviz'])
 
     # 启动 ros2_control

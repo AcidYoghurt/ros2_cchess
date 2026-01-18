@@ -8,7 +8,7 @@ left:
         type: cartesian_move_controller/CartesianMoveController
 
       # 加载吸嘴控制器
-      gripper_controller:
+      gripper_suction_controller:
         type: gripper_suction_controller/GripperSuctionController
 
   cartesian_position_controller:
@@ -20,7 +20,7 @@ left:
         - "y"
         - "z"
 
-  gripper_controller:
+  gripper_suction_controller:
     ros__parameters:
       joints:
         - "left/gripper_suction"

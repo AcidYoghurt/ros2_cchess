@@ -26,10 +26,7 @@
 #include "hardware_interface/handle.hpp"
 #include "hardware_interface/hardware_info.hpp"
 #include "hardware_interface/types/hardware_interface_return_values.hpp"
-#include "rclcpp/macros.hpp"
 #include "rclcpp_lifecycle/state.hpp"
-#include "geometry_msgs/msg/transform_stamped.hpp"
-#include "tf2_ros/transform_broadcaster.h"
 
 namespace machinery_hardware_interface
 {
@@ -99,7 +96,7 @@ private:
   std::vector<double> custom_origin_position;
   std::string frame_prefix_;
   std::string serial_port_name_;
-  int baud_rate_;
+  LibSerial::BaudRate baud_rate_;
 };
 
 }  // namespace machinery_hardware_interface

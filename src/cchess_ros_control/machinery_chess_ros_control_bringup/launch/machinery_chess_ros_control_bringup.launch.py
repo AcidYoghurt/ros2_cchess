@@ -21,6 +21,7 @@ config_path = LaunchConfiguration("config_path")
 urdf_path = LaunchConfiguration("urdf_path")
 namespace = LaunchConfiguration("namespace")
 serial_port_name = LaunchConfiguration("serial_port_name")
+baud_rate = LaunchConfiguration("baud_rate")
 
 # 声明参数
 def declare_parameters():
@@ -48,7 +49,13 @@ def declare_parameters():
         description="机械臂的串口名称"
     )
 
-    return [config_path_arg, urdf_path_arg, namespace_arg, serial_port_name_arg]
+    baud_rate_arg = DeclareLaunchArgument(
+        name='baud_rate',
+        default_value="115200",
+        description="机械臂的串口波特率"
+    )
+
+    return [config_path_arg, urdf_path_arg, namespace_arg, serial_port_name_arg,baud_rate_arg]
 
 # 检查USB设备权限
 def check_usb_permissions(context):
@@ -135,7 +142,8 @@ def machinery_ros2control(context: launch.LaunchContext):
         ' origin_position:=', '"'+str(config_file['/**']['ros__parameters']['origin_position'])+'"',
         ' custom_origin_position:=', '"'+str(config_file['/**']['ros__parameters']['custom_origin_position'])+'"',
         ' frame_prefix:=', namespace,
-        ' serial_port_name:=', serial_port_name
+        ' serial_port_name:=', serial_port_name,
+        ' baud_rate:=',baud_rate
     ]), value_type=str)
     robot_controllers_config = PathJoinSubstitution([config_path, namespace, 'machinery_controllers.yaml'])
     rviz_config = PathJoinSubstitution([config_path, namespace, 'urdf.rviz'])
@@ -177,7 +185,7 @@ def machinery_ros2control(context: launch.LaunchContext):
         package="controller_manager",
         executable="spawner",
         namespace=namespace,
-        arguments=["gripper_controller", "-c", "controller_manager"],
+        arguments=["gripper_suction_controller", "-c", "controller_manager"],
         output="both",
     )
 
