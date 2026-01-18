@@ -1,0 +1,48 @@
+# Copyright (c) 20224 Stogl Robotics Consulting UG (haftungsbeschränkt)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#
+# Source of this file are templates in
+# [RosTeamWorkspace](https://github.com/StoglRobotics/ros_team_workspace) repository.
+#
+
+cartesian_move_controller:
+  joints: {
+    type: string_array,
+    default_value: [],
+    description: "指定该 controller 使用的 joint。如果定义了 state_joints 参数，那么此参数仅表示 命令关节（command joints）",
+    read_only: true,
+    validation: {
+      unique<>: null,
+      not_empty<>: null,
+    }
+  }
+  state_joints: {
+    type: string_array,
+    default_value: [],
+    description: "（可选）指定用于读取状态的关节。仅在 状态关节 与 命令关节 不同的情况下才有意义。",
+    read_only: true,
+    validation: {
+      unique<>: null,
+    }
+  }
+  interfaces: {
+    type: string_array,
+    default_value: [],
+    description: "笛卡尔积command_interfaces，一个joint对应三个command_interface，分别是x y z",
+    read_only: true,
+    validation: {
+      not_empty<>: null
+    }
+  }
