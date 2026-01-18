@@ -16,12 +16,12 @@
 
       <!-- 声明 hardware_interface的接口 -->
       <joint name="$(arg frame_prefix)gripper_position">
-        <command_interface name="x_position"/>
-        <command_interface name="y_position"/>
-        <command_interface name="z_position"/>
-        <state_interface name="x_position"/>
-        <state_interface name="y_position"/>
-        <state_interface name="z_position"/>
+        <command_interface name="x"/>
+        <command_interface name="y"/>
+        <command_interface name="z"/>
+        <state_interface name="x"/>
+        <state_interface name="y"/>
+        <state_interface name="z"/>
       </joint>
       <joint name="$(arg frame_prefix)gripper_suction">
         <command_interface name="position"/>

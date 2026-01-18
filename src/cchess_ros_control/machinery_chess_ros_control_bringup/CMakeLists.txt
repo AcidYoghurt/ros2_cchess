@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(machinery_chess_bringup)
+project(machinery_chess_ros_control_bringup)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -20,9 +20,9 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-install(
-  DIRECTORY config launch urdf
-  DESTINATION share/${PROJECT_NAME}
+ament_auto_package(
+        INSTALL_TO_SHARE
+        config
+        launch
+        urdf
 )
-
-ament_package()

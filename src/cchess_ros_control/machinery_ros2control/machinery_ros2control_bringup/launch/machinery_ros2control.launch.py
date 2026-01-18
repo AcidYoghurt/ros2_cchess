@@ -10,11 +10,14 @@ from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
 
-# 该模块仅用来测试 ros2_control 是否正常运行
+# 该模块仅用来测试 ros2_control 中 hardware_interface 与 controller 是否正常运行
 
-# 测试：
-# ros2 topic pub --once  /cartesian_position_controller/command geometry_msgs/msg/PointStamped "{header: {stamp: {sec: 0, nanosec: 0}, frame_id: 'base_link'}, point: {x: 320.0, y: 0.0, z: 100.0}}"
+# 测试笛卡尔积坐标：
+# ros2 topic pub /left/cartesian_position_controller/reference control_msgs/msg/JointJog "{joint_names: ['left/gripper_position'], displacements: [180.0, 0.0, 444.2], duration: 1.0}"
+# 监听笛卡尔积坐标状态：
+# ros2 topic echo /left/cartesian_position_controller/state
 
+# 测试吸嘴：
 # ros2 topic pub --once /gripper_controller/commands std_msgs/msg/Float64MultiArray "{data: [1.0]}"
 
 config_path = LaunchConfiguration("config_path")
@@ -23,6 +26,7 @@ namespace = LaunchConfiguration("namespace")
 serial_port_name = LaunchConfiguration("serial_port_name")
 
 
+# 声明参数
 def declare_parameters():
     serial_port_name_arg = DeclareLaunchArgument(
         name='serial_port_name',
@@ -50,11 +54,13 @@ def declare_parameters():
 
     return [config_path_arg, urdf_path_arg, namespace_arg, serial_port_name_arg]
 
+# 节点
 def machinery_ros2control(context: launch.LaunchContext):
     config_path_str = LaunchConfiguration('config_path').perform(context)
     namespace_str = namespace.perform(context)
 
-    with open(config_path_str+'/'+namespace_str+'machinery.yaml', 'r', encoding='utf-8') as file:
+    # 一些参数
+    with open(config_path_str+'/machinery/'+namespace_str+'machinery.yaml', 'r', encoding='utf-8') as file:
         config_file = yaml.safe_load(file)
 
     robot_description = ParameterValue(launch.substitutions.Command([
@@ -64,7 +70,7 @@ def machinery_ros2control(context: launch.LaunchContext):
         ' frame_prefix:=', namespace,
         ' serial_port_name:=', serial_port_name
     ]), value_type=str)
-    robot_controllers_config = PathJoinSubstitution([config_path, namespace, 'machinery_controllers.yaml'])
+    robot_controllers_config = PathJoinSubstitution([config_path, '/machinery/', namespace, 'machinery_controllers.yaml'])
     rviz_config = PathJoinSubstitution([config_path, namespace, 'urdf.rviz'])
 
     # 启动 ros2_control
@@ -104,7 +110,7 @@ def machinery_ros2control(context: launch.LaunchContext):
         package="controller_manager",
         executable="spawner",
         namespace=namespace,
-        arguments=["gripper_controller", "-c", "controller_manager"],
+        arguments=["gripper_suction_controller", "-c", "controller_manager"],
         output="both",
     )
 
@@ -120,7 +126,7 @@ def machinery_ros2control(context: launch.LaunchContext):
         ],
     )
 
-    return [control_node, robot_state_pub_node, cartesian_position_controller_spawner, gripper_controller_spawner, rviz_node]
+    return [control_node, cartesian_position_controller_spawner, gripper_controller_spawner]
 
 def generate_launch_description():
 

@@ -17,8 +17,8 @@
 // [RosTeamWorkspace](https://github.com/StoglRobotics/ros_team_workspace) repository.
 //
 
-#ifndef GRIPPER_SUCTION_CONTROLLER__VALIDATE_GRIPPER_SUCTION_CONTROLLER_PARAMETERS_HPP_
-#define GRIPPER_SUCTION_CONTROLLER__VALIDATE_GRIPPER_SUCTION_CONTROLLER_PARAMETERS_HPP_
+#ifndef CARTESIAN_MOVE_CONTROLLER__VALIDATE_CARTESIAN_MOVE_CONTROLLER_PARAMETERS_HPP_
+#define CARTESIAN_MOVE_CONTROLLER__VALIDATE_CARTESIAN_MOVE_CONTROLLER_PARAMETERS_HPP_
 
 #include <string>
 
@@ -26,7 +26,7 @@
 
 namespace parameter_traits
 {
-  namespace gsc_validation
+  namespace cmc_validation
   {
     Result forbidden_interface_name_prefix(rclcpp::Parameter const & parameter)
     {
@@ -42,4 +42,4 @@ namespace parameter_traits
   }
 }  // namespace parameter_traits
 
-#endif  // GRIPPER_SUCTION_CONTROLLER__VALIDATE_GRIPPER_SUCTION_CONTROLLER_PARAMETERS_HPP_
+#endif  // CARTESIAN_MOVE_CONTROLLER__VALIDATE_CARTESIAN_MOVE_CONTROLLER_PARAMETERS_HPP_

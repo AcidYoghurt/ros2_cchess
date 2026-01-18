@@ -195,9 +195,9 @@ namespace machinery_hardware_interface
         {
             if (joint.name == frame_prefix_ + "gripper_position")
             {
-                state_interfaces.emplace_back(joint.name, "x_position", &hw_state_x_);
-                state_interfaces.emplace_back(joint.name, "y_position", &hw_state_y_);
-                state_interfaces.emplace_back(joint.name, "z_position", &hw_state_z_);
+                state_interfaces.emplace_back(joint.name, "x", &hw_state_x_);
+                state_interfaces.emplace_back(joint.name, "y", &hw_state_y_);
+                state_interfaces.emplace_back(joint.name, "z", &hw_state_z_);
             }
             else if (joint.name == frame_prefix_ + "gripper_suction")
             {
@@ -221,9 +221,9 @@ namespace machinery_hardware_interface
         {
             if (joint.name == frame_prefix_ + "gripper_position")
             {
-                command_interfaces.emplace_back(joint.name, "x_position", &hw_command_x_);
-                command_interfaces.emplace_back(joint.name, "y_position", &hw_command_y_);
-                command_interfaces.emplace_back(joint.name, "z_position", &hw_command_z_);
+                command_interfaces.emplace_back(joint.name, "x", &hw_command_x_);
+                command_interfaces.emplace_back(joint.name, "y", &hw_command_y_);
+                command_interfaces.emplace_back(joint.name, "z", &hw_command_z_);
             }
             else if (joint.name == frame_prefix_ + "gripper_suction")
             {
@@ -360,9 +360,13 @@ namespace machinery_hardware_interface
 
             // 发送控制模式指令
             // 回原点
-            if ((std::abs(hw_command_x_ - origin_position[0]) < epsilon ||
-                std::abs(hw_command_y_ - origin_position[1]) < epsilon ||
-                std::abs(hw_command_z_ - origin_position[2]) < epsilon) &&
+            if (
+                // 表示要返回原点
+                (std::abs(hw_command_x_ - origin_position[0]) < epsilon &&
+                std::abs(hw_command_y_ - origin_position[1]) < epsilon &&
+                std::abs(hw_command_z_ - origin_position[2]) < epsilon)
+                &&
+                // 表示距离原点很远
                 (std::abs(hw_command_x_ - last_hw_command_x_) > epsilon ||
                 std::abs(hw_command_y_ - last_hw_command_y_) > epsilon ||
                 std::abs(hw_command_z_ - last_hw_command_z_) > epsilon))

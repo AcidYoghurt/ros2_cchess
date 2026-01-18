@@ -17,11 +17,11 @@
 # [RosTeamWorkspace](https://github.com/StoglRobotics/ros_team_workspace) repository.
 #
 
-gripper_suction_controller:
+cartesian_move_controller:
   joints: {
     type: string_array,
     default_value: [],
-    description: "Specifies joints used by the controller. If state joints parameter is defined, then only command joints are defined with this parameter.",
+    description: "指定该 controller 使用的 joint。如果定义了 state_joints 参数，那么此参数仅表示 命令关节（command joints）",
     read_only: true,
     validation: {
       unique<>: null,
@@ -31,19 +31,18 @@ gripper_suction_controller:
   state_joints: {
     type: string_array,
     default_value: [],
-    description: "(optional) Specifies joints for reading states. This parameter is only relevant when state joints are different then command joint, i.e., when a following controller is used.",
+    description: "（可选）指定用于读取状态的关节。仅在 状态关节 与 命令关节 不同的情况下才有意义。",
     read_only: true,
     validation: {
       unique<>: null,
     }
   }
-  interface_name: {
-    type: string,
-    default_value: "",
-    description: "Name of the interface used by the controller on joints and command_joints.",
+  interfaces: {
+    type: string_array,
+    default_value: [],
+    description: "笛卡尔积command_interfaces，一个joint对应三个command_interface，分别是x y z",
     read_only: true,
     validation: {
-      not_empty<>: null,
-      one_of<>: [["position", "velocity", "acceleration", "effort",]],
+      not_empty<>: null
     }
   }
