@@ -1,0 +1,27 @@
+right:
+  controller_manager:
+    ros__parameters:
+      update_rate: 4  # Hz
+
+      # 加载手臂位置控制器
+      cartesian_position_controller:
+        type: cartesian_move_controller/CartesianMoveController
+
+      # 加载吸嘴控制器
+      gripper_controller:
+        type: gripper_suction_controller/GripperSuctionController
+
+  cartesian_position_controller:
+    ros__parameters:
+      joints:
+        - "right/gripper_position"
+      interfaces:
+        - "x"
+        - "y"
+        - "z"
+
+  gripper_controller:
+    ros__parameters:
+      joints:
+        - "right/gripper_suction"
+      interface_name: "position"

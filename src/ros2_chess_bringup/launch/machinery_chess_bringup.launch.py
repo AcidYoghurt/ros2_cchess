@@ -21,13 +21,13 @@ urdf_path = LaunchConfiguration('urdf_path')
 def declare_parameters():
     config_path_arg = DeclareLaunchArgument(
         name='config_path',
-        default_value=str(os.path.join(get_package_share_directory('machinery_chess_bringup'),'config','machinery')),
+        default_value=str(os.path.join(get_package_share_directory('machinery_chess_ros_control_bringup'),'config','machinery')),
         description='config文件夹 的 路径'
     )
 
     urdf_path_arg = DeclareLaunchArgument(
         name='urdf_path',
-        default_value=str(os.path.join(get_package_share_directory('machinery_chess_bringup'),'urdf')),
+        default_value=str(os.path.join(get_package_share_directory('machinery_chess_ros_control_bringup'),'urdf')),
         description='URDF文件夹 的 路径'
     )
 
@@ -50,9 +50,9 @@ def cchess_ros_control():
     cchess_ros_control_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(
-                get_package_share_directory('machinery_chess_bringup'),
+                get_package_share_directory('machinery_chess_ros_control_bringup'),
                 'launch',
-                'machinery_chess_bringup.launch.py'
+                'machinery_chess_ros_control_bringup.launch.py'
             )
         ),
         launch_arguments={

@@ -1,14 +1,13 @@
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/point_stamped.hpp>
 #include <std_msgs/msg/string.hpp>
-#include <std_msgs/msg/float64_multi_array.hpp>
 #include <std_msgs/msg/bool.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <nlohmann/json.hpp>
 #include <realtime_tools/realtime_box.hpp>
 #include <atomic>
 #include <gripper_suction_controller/gripper_suction_controller.hpp>
-#include <machinery_control_msg/msg/task_status.hpp>
+#include <cartesian_move_controller/cartesian_move_controller.hpp>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/synchronizer.h>
@@ -57,10 +56,9 @@ public:
         // 变量
         error = 1e-6;
         last_cartesian_command = {-1, -1, -1};
-        last_gripper_command = -1;
+        last_gripper_command = {-1};
+        last_task_status = {1,1};
         is_chess_points_received = false;
-        last_task_status[0] = true;
-        last_task_status[1] = true;
         is_running = false;
         machinery_status_.set(MachineryStatus::IDLE);
 
@@ -74,8 +72,8 @@ public:
             "ai_move_topic",10,std::bind(&MachineryCommandControlNode::process_task,this,std::placeholders::_1));
 
         // 发布机械臂目标点
-        arm_command_pub_ = this->create_publisher<geometry_msgs::msg::PointStamped>(
-            "cartesian_position_controller/command", 10);
+        arm_command_pub_ = this->create_publisher<cartesian_move_controller::CartesianMoveController::ControllerReferenceMsg>(
+            "cartesian_position_controller/reference", 10);
 
         // 发布吸嘴控制指令
         // gripper_command_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
@@ -92,7 +90,7 @@ public:
             "/status_topic",10);
 
         // 接收机械臂状态
-        arm_status_sub_.subscribe(this,"cartesian_position_controller/task_status");
+        arm_status_sub_.subscribe(this,"cartesian_position_controller/state");
         // 接收吸嘴状态
         gripper_status_sub_.subscribe(this,"gripper_controller/state");
         sync_ = std::make_shared<message_filters::Synchronizer<SyncPolicy>>(SyncPolicy(10),arm_status_sub_,gripper_status_sub_);
@@ -106,7 +104,7 @@ public:
     }
 private:
     // --- 工具函数 ---
-    void control_cartesian_point(geometry_msgs::msg::PointStamped point_stamped)
+    void control_cartesian_point(cartesian_move_controller::CartesianMoveController::ControllerReferenceMsg cartesian_move_cmd)
     {
         // 等待机械臂空闲才进入函数
         MachineryStatus status;
@@ -119,18 +117,19 @@ private:
         }
 
         // 只有发送命令不一致的时候才需要 发布指令 和 修改机械臂状态
-        if (abs(last_cartesian_command[0] - point_stamped.point.x)>error ||
-            abs(last_cartesian_command[1] - point_stamped.point.y)>error ||
-            abs(last_cartesian_command[2] - point_stamped.point.z)>error)
+        for (size_t i=0;i<cartesian_move_cmd.displacements.size();i++)
         {
-            // 发布指令
-            arm_command_pub_->publish(point_stamped);
+            if (abs(last_cartesian_command[i] - cartesian_move_cmd.displacements[i])>error)
+            {
+                // 发布指令
+                arm_command_pub_->publish(cartesian_move_cmd);
 
-            // 修改机械臂状态
-            machinery_status_.set(MachineryStatus::BUSY);
-            last_cartesian_command[0] = point_stamped.point.x;
-            last_cartesian_command[1] = point_stamped.point.y;
-            last_cartesian_command[2] = point_stamped.point.z;
+                // 修改机械臂状态
+                machinery_status_.set(MachineryStatus::BUSY);
+                for (size_t j=0;j<cartesian_move_cmd.displacements.size();j++)
+                    last_cartesian_command[j] = cartesian_move_cmd.displacements[j];
+                break;
+            }
         }
 
         // 等待机械臂空闲才退出函数
@@ -154,14 +153,20 @@ private:
         }
 
         // 只有发送命令不一致的时候才需要 发布指令 和 修改机械臂状态
-        if (abs(last_gripper_command - suction_cmd.displacements[0])>error)
+        for (size_t i=0;i<suction_cmd.displacements.size();i++)
         {
-            // 发布指令
-            gripper_command_pub_->publish(suction_cmd);
+            if (abs(last_gripper_command[i] - suction_cmd.displacements[i])>error)
+            {
+                // 发布指令
+                gripper_command_pub_->publish(suction_cmd);
 
-            // 修改机械臂状态
-            machinery_status_.set(MachineryStatus::BUSY);
-            last_gripper_command = suction_cmd.displacements[0];
+                // 修改机械臂状态
+                machinery_status_.set(MachineryStatus::BUSY);
+                for (size_t j=0;j<suction_cmd.displacements.size();j++)
+                    last_gripper_command[j] = suction_cmd.displacements[j];
+
+                break;
+            }
         }
 
         // 等待机械臂空闲才退出函数
@@ -174,22 +179,22 @@ private:
     }
 
     // --- 订阅回调 ---
-    void task_status_callback(const machinery_control_msg::msg::TaskStatus::ConstSharedPtr& arm_status, const gripper_suction_controller::GripperSuctionController::ControllerStateMsg::ConstSharedPtr& gripper_status)
+    void task_status_callback(const cartesian_move_controller::CartesianMoveController::ControllerStateMsg::ConstSharedPtr& arm_status, const gripper_suction_controller::GripperSuctionController::ControllerStateMsg::ConstSharedPtr& gripper_status)
     {
-        if ((last_task_status[0]==true && arm_status->is_idle==false) ||
-            (last_task_status[1]==true && gripper_status->set_point==0.0))
+        if ((last_task_status[0]==1.0 && arm_status->set_point==0.0) ||
+            (last_task_status[1]==1.0 && gripper_status->set_point==0.0))
         {
             machinery_status_.set(MachineryStatus::BUSY);
             RCLCPP_INFO(this->get_logger(),"机械臂状态：BUSY");
         }
-        else if ((last_task_status[0]==false && arm_status->is_idle==true) ||
-                 (last_task_status[1]==false && gripper_status->set_point==1.0))
+        else if ((last_task_status[0]==0.0 && arm_status->set_point==1.0) ||
+                 (last_task_status[1]==0.0 && gripper_status->set_point==1.0))
         {
             machinery_status_.set(MachineryStatus::IDLE);
             RCLCPP_INFO(this->get_logger(),"机械臂状态：IDLE");
         }
-        last_task_status[0] = arm_status->is_idle;
-        last_task_status[1] = (gripper_status->set_point > 0.5) ? true : false;
+        last_task_status[0] = arm_status->set_point;
+        last_task_status[1] = gripper_status->set_point;
     }
 
     void chess_points_json_callback(const std_msgs::msg::String::SharedPtr msg)
@@ -277,10 +282,12 @@ private:
             ~StateGuard() { flag = false; }
         } state_guard(is_running);
 
-        geometry_msgs::msg::PointStamped command_msg;
-        command_msg.header.frame_id = namespace_+"base_link";
+        cartesian_move_controller::CartesianMoveController::ControllerReferenceMsg command_msg;
+        command_msg.header.frame_id = this->get_name();
+        command_msg.joint_names = {namespace_+"gripper_position"};
         gripper_suction_controller::GripperSuctionController::ControllerReferenceMsg suction_cmd;
-        suction_cmd.header.frame_id = namespace_+"base_link";
+        suction_cmd.header.frame_id = this->get_name();
+        suction_cmd.joint_names={namespace_+"gripper_suction"};
 
         for (size_t i = 0; i < point_to_move.size(); ++i)
         {
@@ -298,9 +305,7 @@ private:
 
                     // 点位不存在时返回自定义原点，并控制吸嘴
                     command_msg.header.stamp = this->get_clock()->now();
-                    command_msg.point.x = custom_origin_position[0];
-                    command_msg.point.y = custom_origin_position[1];
-                    command_msg.point.z = custom_origin_position[2];
+                    command_msg.displacements = {custom_origin_position[0],custom_origin_position[1],custom_origin_position[2]};
                     control_cartesian_point(command_msg);
 
                     suction_cmd.header.stamp = this->get_clock()->now();
@@ -318,23 +323,18 @@ private:
                 // 去到中间点
                 RCLCPP_INFO(this->get_logger(), "正在前往中间点");
                 command_msg.header.stamp = this->get_clock()->now();
-                command_msg.point.x = (coords[0])*1000;
-                command_msg.point.y = (coords[1])*1000;
-                command_msg.point.z = (coords[2])*1000+170;
+                command_msg.displacements = {(coords[0])*1000,(coords[1])*1000,(coords[2])*1000+170};
                 control_cartesian_point(command_msg);
 
                 // 去到投放点
                 RCLCPP_INFO(this->get_logger(), "正在送到投放点");
                 command_msg.header.stamp = this->get_clock()->now();
-                command_msg.point.x = (coords[0])*1000;
-                command_msg.point.y = (coords[1])*1000;
-                command_msg.point.z = (coords[2])*1000;
+                command_msg.displacements = {(coords[0])*1000,(coords[1])*1000,(coords[2])*1000};
                 control_cartesian_point(command_msg);
 
                 // 控制吸嘴
                 RCLCPP_INFO(this->get_logger(), "设置吸嘴状态为: 0");
                 suction_cmd.header.stamp = this->get_clock()->now();
-                suction_cmd.joint_names={"gripper_suction"};
                 suction_cmd.displacements={0.0};
                 control_gripper(suction_cmd);
 
@@ -342,9 +342,7 @@ private:
                 RCLCPP_INFO(this->get_logger(), "正在前往中间点");
                 command_msg.header.stamp = this->get_clock()->now();
                 command_msg.header.frame_id = namespace_+"base_link";
-                command_msg.point.x = (coords[0])*1000;
-                command_msg.point.y = (coords[1])*1000;
-                command_msg.point.z = (coords[2])*1000+170;
+                command_msg.displacements = {(coords[0])*1000,(coords[1])*1000,(coords[2])*1000+170};
                 control_cartesian_point(command_msg);
             }
             else{
@@ -352,30 +350,24 @@ private:
                 // 去到中间点
                 RCLCPP_INFO(this->get_logger(), "去中间点");
                 command_msg.header.stamp = this->get_clock()->now();
-                command_msg.point.x = (coords[0])*1000;
-                command_msg.point.y = (coords[1])*1000;
-                command_msg.point.z = (coords[2])*1000+20;
+                command_msg.displacements = {(coords[0])*1000,(coords[1])*1000,(coords[2])*1000+20};
                 control_cartesian_point(command_msg);
 
                 // 去到投放点
                 command_msg.header.stamp = this->get_clock()->now();
-                command_msg.point.x = (coords[0])*1000;
-                command_msg.point.y = (coords[1])*1000;
-                command_msg.point.z = (coords[2])*1000;
+                command_msg.displacements = {(coords[0])*1000,(coords[1])*1000,(coords[2])*1000};
                 control_cartesian_point(command_msg);
 
                 // 3. 到达目标点后，控制吸嘴
                 if (i%2==0) {
                     RCLCPP_INFO(this->get_logger(), "设置吸嘴状态为: 1");
                     suction_cmd.header.stamp = this->get_clock()->now();
-                    suction_cmd.joint_names={"gripper_suction"};
                     suction_cmd.displacements={1.0};
                     control_gripper(suction_cmd);
                 }
                 else if (i%2==1){
                     RCLCPP_INFO(this->get_logger(), "设置吸嘴状态为: 0");
                     suction_cmd.header.stamp = this->get_clock()->now();
-                    suction_cmd.joint_names={"gripper_suction"};
                     suction_cmd.displacements={0.0};
                     control_gripper(suction_cmd);
                 }
@@ -383,9 +375,7 @@ private:
                 // 4.返回中间点
                 RCLCPP_INFO(this->get_logger(), "返回中间点");
                 command_msg.header.stamp = this->get_clock()->now();
-                command_msg.point.x = (coords[0])*1000;
-                command_msg.point.y = (coords[1])*1000;
-                command_msg.point.z = (coords[2])*1000+20;
+                command_msg.displacements = {(coords[0])*1000,(coords[1])*1000,(coords[2])*1000+20};
                 control_cartesian_point(command_msg);
             }
         }
@@ -393,16 +383,12 @@ private:
         // 5.返回原点
         RCLCPP_INFO(this->get_logger(), "返回原点");
         command_msg.header.stamp = this->get_clock()->now();
-        command_msg.point.x = origin_position[0];
-        command_msg.point.y = origin_position[1];
-        command_msg.point.z = origin_position[2];
+        command_msg.displacements = {origin_position[0],origin_position[1],origin_position[2]};
         control_cartesian_point(command_msg);
 
         // 6.返回自定义原点
         command_msg.header.stamp = this->get_clock()->now();
-        command_msg.point.x = custom_origin_position[0];
-        command_msg.point.y = custom_origin_position[1];
-        command_msg.point.z = custom_origin_position[2];
+        command_msg.displacements = {custom_origin_position[0],custom_origin_position[1],custom_origin_position[2]};
         control_cartesian_point(command_msg);
         RCLCPP_INFO(this->get_logger(), "下棋完毕，正在前往原点");
         std_msgs::msg::String qt_msg = std_msgs::msg::String();
@@ -411,7 +397,6 @@ private:
 
         // 7.控制吸嘴，防止出意外
         suction_cmd.header.stamp = this->get_clock()->now();
-        suction_cmd.joint_names={"gripper_suction"};
         suction_cmd.displacements={0.0};
         control_gripper(suction_cmd);
 
@@ -424,23 +409,22 @@ private:
     // ROS 接口
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr chess_points_sub_;
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr command_control_topic_;
-    rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr arm_command_pub_;
-    // rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr gripper_command_pub_;
+    rclcpp::Publisher<cartesian_move_controller::CartesianMoveController::ControllerReferenceMsg>::SharedPtr arm_command_pub_;
     rclcpp::Publisher<gripper_suction_controller::GripperSuctionController::ControllerReferenceMsg>::SharedPtr gripper_command_pub_;
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr machinery_pub_image_trigger;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr qt_debug_msg_pub;
 
-    message_filters::Subscriber<machinery_control_msg::msg::TaskStatus> arm_status_sub_;
+    message_filters::Subscriber<cartesian_move_controller::CartesianMoveController::ControllerStateMsg> arm_status_sub_;
     message_filters::Subscriber<gripper_suction_controller::GripperSuctionController::ControllerStateMsg> gripper_status_sub_;
-    using SyncPolicy = message_filters::sync_policies::ApproximateTime<machinery_control_msg::msg::TaskStatus,gripper_suction_controller::GripperSuctionController::ControllerStateMsg>;
+    using SyncPolicy = message_filters::sync_policies::ApproximateTime<cartesian_move_controller::CartesianMoveController::ControllerStateMsg,gripper_suction_controller::GripperSuctionController::ControllerStateMsg>;
     std::shared_ptr<message_filters::Synchronizer<SyncPolicy>> sync_;
 
     // 变量
-    realtime_tools::RealtimeBox<MachineryStatus> machinery_status_{MachineryStatus::IDLE}; // 无锁、实时安全的数据交换盒
+    realtime_tools::RealtimeBox<MachineryStatus> machinery_status_; // 无锁、实时安全的数据交换盒
     double error;
     std::vector<double> last_cartesian_command;
-    double last_gripper_command;
-    bool last_task_status[2];
+    std::vector<double> last_gripper_command;
+    std::vector<double> last_task_status;
     bool is_chess_points_received;
     std::atomic<bool> is_running;
 

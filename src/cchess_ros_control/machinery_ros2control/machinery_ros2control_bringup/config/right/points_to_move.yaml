@@ -1,4 +1,0 @@
-/**:
-  ros__parameters:
-    points_to_move: 'all'
-    # points_to_move: "['a0','a9','i0','i9']"

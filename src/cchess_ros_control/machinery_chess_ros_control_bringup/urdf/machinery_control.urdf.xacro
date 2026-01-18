@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot name="Machinery" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="machinery_control" params="origin_position custom_origin_position frame_prefix serial_port_name">
+    <ros2_control name="MachineryRobotSystem" type="system">
+
+      <!-- 指定 hardware_interface 插件 -->
+      <hardware>
+        <plugin>machinery_hardware_interface/MachineryHardwareInterface</plugin>
+        <param name="origin_position">$(arg origin_position)</param>
+        <param name="custom_origin_position">$(arg custom_origin_position)</param>
+        <param name="frame_prefix">$(arg frame_prefix)</param>
+        <param name="serial_port_name">$(arg serial_port_name)</param>
+<!--        <param name="baud_rate">$(arg baud_rate)</param>-->
+      </hardware>
+
+      <!-- 声明 hardware_interface的接口 -->
+      <joint name="$(arg frame_prefix)gripper_position">
+        <command_interface name="x"/>
+        <command_interface name="y"/>
+        <command_interface name="z"/>
+        <state_interface name="x"/>
+        <state_interface name="y"/>
+        <state_interface name="z"/>
+      </joint>
+      <joint name="$(arg frame_prefix)gripper_suction">
+        <command_interface name="position"/>
+        <state_interface name="position"/>
+      </joint>
+
+    </ros2_control>
+  </xacro:macro>
+</robot>
