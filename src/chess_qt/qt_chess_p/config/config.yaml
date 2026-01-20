@@ -1,0 +1,35 @@
+HUMAN_AI:
+  - name: "machinery_chess_bringup.launch.py"
+    parameters:
+      serial_port_name: "/dev/machineryRightB"
+      namespace: "right/"
+  - name: "machinery_chess_bringup.launch.py"
+    parameters:
+      serial_port_name: "/dev/machineryLeftA"
+      namespace: "left/"
+  - name: "cchess_person.launch.py"
+    parameters: {}
+
+AI_AI:
+  - name: "machinery_chess_bringup.launch.py"
+    parameters:
+      serial_port_name: "/dev/machineryRightB"
+      namespace: "right/"
+  - name: "machinery_chess_bringup.launch.py"
+    parameters:
+      serial_port_name: "/dev/machineryLeftA"
+      namespace: "left/"
+  - name: "cchess_rob.launch.py"
+    parameters: {}
+
+VOICE_AI:
+  - name: "machinery_chess_bringup.launch.py"
+    parameters:
+      serial_port_name: "/dev/machineryRightB"
+      namespace: "right/"
+  - name: "machinery_chess_bringup.launch.py"
+    parameters:
+      serial_port_name: "/dev/machineryLeftA"
+      namespace: "left/"
+  - name: "cchess_voice.launch.py"
+    parameters: {}

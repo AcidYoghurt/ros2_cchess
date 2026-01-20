@@ -1,5 +1,9 @@
-SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", MODE:="0666", GROUP:="dialout", KERNELS=="3-1.3",  SYMLINK+="MachineryB"
+# 注意：这个只是示例，每台机器的KERNELS值都不一样
+# 映射右机械臂
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", MODE:="0666", GROUP:="dialout", KERNELS=="3-1.3",  SYMLINK+="machineryRightB"
 
-SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", MODE:="0666", GROUP:="dialout", KERNELS=="3-1.4",  SYMLINK+="MachineryA"
+# 映射左机械臂
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", MODE:="0666", GROUP:="dialout", KERNELS=="3-1.4",  SYMLINK+="machineryLeftA"
 
+# 映射相机（可选）
 SUBSYSTEM=="video4linux", ATTRS{idVendor}=="2bc5", ATTRS{idProduct}=="0511", ATTRS{serial}=="AY2G15200FR", SYMLINK+="orbbec-gemini", MODE="0666"
