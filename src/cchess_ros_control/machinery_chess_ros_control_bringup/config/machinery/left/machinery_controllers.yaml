@@ -11,6 +11,7 @@ left:
       gripper_suction_controller:
         type: gripper_suction_controller/GripperSuctionController
 
+  # 因为控制的是机械臂的笛卡尔积，所以 一个joint 对应 三个interface
   cartesian_position_controller:
     ros__parameters:
       joints:
@@ -20,6 +21,7 @@ left:
         - "y"
         - "z"
 
+  # 吸嘴控制器，只用控制吸嘴的开和关，所以 一个joint 对应 一个interface
   gripper_suction_controller:
     ros__parameters:
       joints:

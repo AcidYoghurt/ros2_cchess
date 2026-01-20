@@ -24,6 +24,7 @@ enum class MachineryStatus
     BUSY
 };
 
+// 机械臂控制序列类
 class MachineryCommandControlNode : public rclcpp::Node
 {
 public:
@@ -436,7 +437,7 @@ private:
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
-    // 使用多线程执行器，确保Action服务器和其他回调不会相互阻塞
+    // 使用多线程执行器
     rclcpp::executors::MultiThreadedExecutor executor;
     auto node = std::make_shared<MachineryCommandControlNode>();
     executor.add_node(node);

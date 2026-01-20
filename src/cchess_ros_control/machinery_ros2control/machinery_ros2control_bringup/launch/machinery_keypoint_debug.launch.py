@@ -9,8 +9,10 @@ from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
 # 该模块用来测试 机械臂是否能够到达棋盘点位
+# 通过键盘WASD来控制控制机械臂前后左右运动，Q是向上运动，E是向下运动
 
-# 测试：ros2 launch machinery_ros2control_bringup machinery_keypoint_debug.launch.py serial_port_name:=/dev/MachineryA namespace:=left/
+# 测试：ros2 launch machinery_ros2control_bringup machinery_keypoint_debug.launch.py serial_port_name:=/dev/machineryLeftA namespace:=left/
+# 测试：ros2 launch machinery_ros2control_bringup machinery_keypoint_debug.launch.py serial_port_name:=/dev/machineryRightB namespace:=right/
 
 config_path = LaunchConfiguration("config_path")
 urdf_path = LaunchConfiguration("urdf_path")

@@ -13,12 +13,15 @@ from launch_ros.parameter_descriptions import ParameterValue
 # 该模块仅用来测试 ros2_control 中 hardware_interface 与 controller 是否正常运行
 
 # 测试笛卡尔积坐标：
-# ros2 topic pub /left/cartesian_position_controller/reference control_msgs/msg/JointJog "{joint_names: ['left/gripper_position'], displacements: [180.0, 0.0, 444.2], duration: 1.0}"
+# ros2 topic pub --once /left/cartesian_position_controller/reference control_msgs/msg/JointJog "{joint_names: ['left/gripper_position'], displacements: [180.0, 0.0, 444.2]}"
 # 监听笛卡尔积坐标状态：
 # ros2 topic echo /left/cartesian_position_controller/state
 
 # 测试吸嘴：
-# ros2 topic pub --once /gripper_controller/commands std_msgs/msg/Float64MultiArray "{data: [1.0]}"
+# 打开吸嘴： ros2 topic pub --once /left/gripper_suction_controller/reference control_msgs/msg/JointJog "{joint_names: ['left/gripper_suction'], displacements: [1.0]}"
+# 关闭吸嘴： ros2 topic pub --once /left/gripper_suction_controller/reference control_msgs/msg/JointJog "{joint_names: ['left/gripper_suction'], displacements: [0.0]}"
+# 监听吸嘴状态：
+# ros2 topic echo /left/gripper_suction_controller/state
 
 config_path = LaunchConfiguration("config_path")
 urdf_path = LaunchConfiguration("urdf_path")

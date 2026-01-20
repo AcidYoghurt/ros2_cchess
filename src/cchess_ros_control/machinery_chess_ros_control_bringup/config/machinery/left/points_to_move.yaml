@@ -1,4 +1,5 @@
 /**:
+  # 该config文件只针对棋盘关键点检测 machinery_keypoint_debug.launch.py
   ros__parameters:
-    points_to_move: 'all'
-    # points_to_move: "['a0','a9','i0','i9','i8']"
+    points_to_move: 'all' # all表示走全部点
+    # points_to_move: "['a0','a9','i0','i9','i8']"  # 你也可以选择要走的点位
