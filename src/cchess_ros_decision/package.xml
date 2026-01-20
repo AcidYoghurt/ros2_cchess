@@ -7,7 +7,6 @@
   <maintainer email="2654944298@qq.com">nameless</maintainer>
   <license>Apache-2.0</license>
 
-  <build_depend>ament_python</build_depend>
   <build_depend>ament_index_python</build_depend>
   <exec_depend>rclpy</exec_depend>
   <exec_depend>cv_bridge</exec_depend>
