@@ -1,4 +1,0 @@
-opencv-python
-onnxruntime
-‘numpy<2’
-PySide6
