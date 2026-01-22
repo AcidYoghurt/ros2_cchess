@@ -267,11 +267,11 @@ config
 
   - **初始点**：
 
-    <img src="assets/6970841cbcf1c.png" alt="初始点.png" style="zoom: 25%;" />
+    ![初始点.png](https://free.picui.cn/free/2026/01/21/6970841cbcf1c.png)
 
   - **自定义原点（防止碰撞）**：
 
-    <img src="assets/6970841d6be30.png" alt="自定义原点.png" style="zoom:25%;" />
+    ![自定义原点.png](https://free.picui.cn/free/2026/01/21/6970841d6be30.png)
 
 - ```points_to_move.yaml```：该文件是专门为了machinery_keyboard_control中的machinery_keypoint_debug_node.py调试用，规定要走什么点位
 
