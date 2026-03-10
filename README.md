@@ -14,29 +14,29 @@
 
   ```bash
   ros2_cchess项目结构
-  ├── cchess_ros_control	# 执行与感知层
-  │   ├── machinery_camera	# 视觉识别【未使用】
-  │   │   ├── chess_corner_recognition	# 棋盘角点识别
-  │   │   └── pub_camera	# 启动相机
-  │   ├── machinery_chess_ros_control_bringup	# 测试执行与感知层
-  │   ├── machinery_model	# 机器模型【未使用】
-  │   └── machinery_ros2control	# 硬件控制，使用了ros2_control框架
-  │       ├── machinery_control	# 通过决策层发出的指令来操控机械臂
-  │       ├── machinery_controller	# ros2_control中的controller
-  │       ├── machinery_hardware_interface	# ros2_control中的hardware_interface
-  │       ├── machinery_keyboard_control	# 键盘操操控机械臂
-  │       └── machinery_ros2control_bringup	# 测试machinery_ros2control模块
-  ├── cchess_ros		# 决策层
-  │       ├── resource	# 象棋引擎pikafish与象棋识别模型onnx
-  │       ├── cchess_ros	# 相关决策节点
-  │       ├── chess_camera.py	# 实际相机控制节点
-  │       ├── chessboard_recognizer_node.py	# 象棋与棋盘识别节点
-  │		├── chess_engine_node.py	# 象棋主引擎（全模式都会使用的决策节点）
-  │       └── rob_engine_node.py	# 象棋副引擎（只有启动两台机械臂时用于控制第二台机械臂）
-  ├── chess_qt	# 应用层，负责与用户交互，显示棋盘状态
-  │   ├── qt_chess_p	# 中国象棋对弈系统主程序
-  │   └── qt_point	# 中国象棋点位配置主程序
-  └── ros2_chess_bringup	# 集成层，负责统筹全局，一键启动所有节点
+  ├── cchess_ros_control	                      # 执行与感知层
+  │   ├── machinery_camera	                    # 视觉识别【未使用】
+  │   │   ├── chess_corner_recognition	        # 棋盘角点识别
+  │   │   └── pub_camera	                      # 启动相机
+  │   ├── machinery_chess_ros_control_bringup	  # 测试执行与感知层
+  │   ├── machinery_model	                      # 机器模型【未使用】
+  │   └── machinery_ros2control	                # 硬件控制，使用了ros2_control框架
+  │       ├── machinery_control	                # 通过决策层发出的指令来操控机械臂
+  │       ├── machinery_controller	            # ros2_control中的controller
+  │       ├── machinery_hardware_interface	    # ros2_control中的hardware_interface
+  │       ├── machinery_keyboard_control	      # 键盘操操控机械臂
+  │       └── machinery_ros2control_bringup	    # 测试machinery_ros2control模块
+  ├── cchess_ros		                            # 决策层
+  │       ├── resource	                        # 象棋引擎pikafish与象棋识别模型onnx
+  │       ├── cchess_ros	                      # 相关决策节点
+  │       ├── chess_camera.py	                  # 实际相机控制节点
+  │       ├── chessboard_recognizer_node.py	    # 象棋与棋盘识别节点
+  │		├── chess_engine_node.py	                # 象棋主引擎（全模式都会使用的决策节点）
+  │       └── rob_engine_node.py	              # 象棋副引擎（只有启动两台机械臂时用于控制第二台机械臂）
+  ├── chess_qt	                                # 应用层，负责与用户交互，显示棋盘状态
+  │   ├── qt_chess_p	                          # 中国象棋对弈系统主程序
+  │   └── qt_point	                            # 中国象棋点位配置主程序
+  └── ros2_chess_bringup	                      # 集成层，负责统筹全局，一键启动所有节点
   ```
 
 
