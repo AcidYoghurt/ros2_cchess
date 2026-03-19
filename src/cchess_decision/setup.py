@@ -1,9 +1,8 @@
 from setuptools import setup, find_packages
 import os
 from glob import glob
-from ament_index_python.packages import get_package_share_directory
 
-package_name = 'cchess_ros_decision'
+package_name = 'cchess_decision'
 
 setup(
     name=package_name,
@@ -26,10 +25,10 @@ setup(
     tests_require=['pytest'],
      entry_points={
         'console_scripts': [
-            'chessboard_recognizer_node = cchess_ros_decision.chessboard_recognizer_node:main',
-            'chess_engine_node = cchess_ros_decision.chess_engine_node:main', 
-            'chess_camera_publisher = cchess_ros_decision.chess_camera:main',
-            'rob_engine_node = cchess_ros_decision.rob_engine_node:main'
+            'chessboard_recognizer_node = cchess_decision.chessboard_recognizer_node:main',
+            'chess_engine_node = cchess_decision.chess_engine_node:main', 
+            'chess_camera_publisher = cchess_decision.chess_camera:main',
+            'rob_engine_node = cchess_decision.rob_engine_node:main'
         ],
     },
 )

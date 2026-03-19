@@ -23,7 +23,6 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtSvgWidgets import QSvgWidget
-from ament_index_python import get_package_share_directory
 
 # ================= 语音识别线程 =================
 class VoiceRecognitionThread(QThread):

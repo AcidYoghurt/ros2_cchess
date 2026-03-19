@@ -22,13 +22,13 @@ baud_rate = LaunchConfiguration("baud_rate")
 def declare_parameters():
     config_path_arg = DeclareLaunchArgument(
         name='config_path',
-        default_value=str(os.path.join(get_package_share_directory('machinery_chess_ros_control_bringup'),'config','machinery')),
+        default_value=str(os.path.join(get_package_share_directory('machinery_chess_control_bringup'),'config','machinery')),
         description='config文件夹 的 路径'
     )
 
     urdf_path_arg = DeclareLaunchArgument(
         name='urdf_path',
-        default_value=str(os.path.join(get_package_share_directory('machinery_chess_ros_control_bringup'),'urdf')),
+        default_value=str(os.path.join(get_package_share_directory('machinery_chess_control_bringup'),'urdf')),
         description='URDF文件夹 的 路径'
     )
 
@@ -53,13 +53,13 @@ def declare_parameters():
     return [config_path_arg, urdf_path_arg, namespace_arg, serial_port_name_arg, baud_rate_arg]
 
 # 节点
-def cchess_ros_control():
-    cchess_ros_control_launch = IncludeLaunchDescription(
+def cchess_control():
+    cchess_control_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(
-                get_package_share_directory('machinery_chess_ros_control_bringup'),
+                get_package_share_directory('machinery_chess_control_bringup'),
                 'launch',
-                'machinery_chess_ros_control_bringup.launch.py'
+                'machinery_chess_control_bringup.launch.py'
             )
         ),
         launch_arguments={
@@ -70,7 +70,7 @@ def cchess_ros_control():
             'baud_rate': baud_rate,
         }.items()
     )
-    return [cchess_ros_control_launch]
+    return [cchess_control_launch]
 
 # 汇总
 def generate_launch_description():
@@ -78,9 +78,9 @@ def generate_launch_description():
     declare_parameter = declare_parameters()
 
     # 启动节点
-    cchess_ros_control_launch = cchess_ros_control()
+    cchess_control_launch = cchess_control()
 
     return LaunchDescription(
         declare_parameter+
-        cchess_ros_control_launch
+        cchess_control_launch
     )

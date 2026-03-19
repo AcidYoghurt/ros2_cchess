@@ -67,7 +67,7 @@ class ChessboardRecognizerNode(Node):
         self.get_logger().info(f"加载模型: {pose_model_path}  {full_classifier_model_path}")
 
         try:
-            package_share_dir = get_package_share_directory('cchess_ros_decision')
+            package_share_dir = get_package_share_directory('cchess_decision')
             self.detector = ChessboardDetector(
                 pose_model_path=os.path.join(package_share_dir, pose_model_path),
                 full_classifier_model_path=os.path.join(package_share_dir, full_classifier_model_path)

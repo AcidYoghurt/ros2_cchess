@@ -4,11 +4,11 @@
 
 ```bash
 machinery_ros2control
-├── machinery_control	              # 通过决策层发出的指令来操控机械臂
-├── machinery_controller	          # ros2_control中的controller
-├── machinery_hardware_interface	  # ros2_control中的hardware_interface
-├── machinery_keyboard_control	    # 键盘操操控机械臂
-└── machinery_ros2control_bringup	  # 测试machinery_ros2control模块
+├── machinery_control                 # 通过决策层发出的指令来操控机械臂
+├── machinery_controller              # ros2_control中的controller
+├── machinery_hardware_interface      # ros2_control中的hardware_interface
+├── machinery_keyboard_control        # 键盘操操控机械臂
+└── machinery_ros2control_bringup     # 测试machinery_ros2control模块
 ```
 
 ---

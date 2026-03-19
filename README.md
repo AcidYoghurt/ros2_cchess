@@ -14,29 +14,29 @@
 
   ```bash
   ros2_cchess项目结构
-  ├── cchess_ros_control	                      # 执行与感知层
-  │   ├── machinery_camera	                    # 视觉识别【未使用】
-  │   │   ├── chess_corner_recognition	        # 棋盘角点识别
-  │   │   └── pub_camera	                      # 启动相机
-  │   ├── machinery_chess_ros_control_bringup	  # 测试执行与感知层
-  │   ├── machinery_model	                      # 机器模型【未使用】
-  │   └── machinery_ros2control	                # 硬件控制，使用了ros2_control框架
-  │       ├── machinery_control	                # 通过决策层发出的指令来操控机械臂
-  │       ├── machinery_controller	            # ros2_control中的controller
+  ├── cchess_ros_control							# 执行与感知层
+  │   ├── machinery_camera						# 视觉识别【未使用】
+  │   │   ├── chess_corner_recognition			# 棋盘角点识别
+  │   │   └── pub_camera							# 启动相机
+  │   ├── machinery_chess_ros_control_bringup		# 测试执行与感知层
+  │   ├── machinery_model							# 机器模型【未使用】
+  │   └── machinery_ros2control					# 硬件控制，使用了ros2_control框架
+  │       ├── machinery_control					# 通过决策层发出的指令来操控机械臂
+  │       ├── machinery_controller				# ros2_control中的controller
   │       ├── machinery_hardware_interface	    # ros2_control中的hardware_interface
-  │       ├── machinery_keyboard_control	      # 键盘操操控机械臂
-  │       └── machinery_ros2control_bringup	    # 测试machinery_ros2control模块
-  ├── cchess_ros		                            # 决策层
+  │       ├── machinery_keyboard_control			# 键盘操操控机械臂
+  │       └── machinery_ros2control_bringup		# 测试machinery_ros2control模块
+  ├── cchess_ros									# 决策层
   │       ├── resource	                        # 象棋引擎pikafish与象棋识别模型onnx
-  │       ├── cchess_ros	                      # 相关决策节点
-  │       ├── chess_camera.py	                  # 实际相机控制节点
-  │       ├── chessboard_recognizer_node.py	    # 象棋与棋盘识别节点
-  │		├── chess_engine_node.py	                # 象棋主引擎（全模式都会使用的决策节点）
-  │       └── rob_engine_node.py	              # 象棋副引擎（只有启动两台机械臂时用于控制第二台机械臂）
-  ├── chess_qt	                                # 应用层，负责与用户交互，显示棋盘状态
-  │   ├── qt_chess_p	                          # 中国象棋对弈系统主程序
-  │   └── qt_point	                            # 中国象棋点位配置主程序
-  └── ros2_chess_bringup	                      # 集成层，负责统筹全局，一键启动所有节点
+  │       ├── cchess_ros							# 相关决策节点
+  │       ├── chess_camera.py						# 实际相机控制节点
+  │       ├── chessboard_recognizer_node.py		# 象棋与棋盘识别节点
+  │		├── chess_engine_node.py				# 象棋主引擎（全模式都会使用的决策节点）
+  │       └── rob_engine_node.py					# 象棋副引擎（只有启动两台机械臂时用于控制第二台机械臂）
+  ├── chess_qt									# 应用层，负责与用户交互，显示棋盘状态
+  │   ├── qt_chess_p								# 中国象棋对弈系统主程序
+  │   └── qt_point								# 中国象棋点位配置主程序
+  └── ros2_chess_bringup							# 集成层，负责统筹全局，一键启动所有节点
   ```
 
 
@@ -58,48 +58,52 @@ wget http://fishros.com/install -O fishros && . fishros
 
 > [!WARNING]
 >
-> ROS2一定要选择humble版本
+> ROS2一定要选择`humble`版本
 
-### 2.3 依赖安装
+### 2.3 拉取项目
+
+```bash
+# 安装git
+sudo apt install git
+
+# 克隆本项目
+git clone https://github.com/AcidYoghurt/ros2_cchess.git
+```
+
+### 2.4 依赖安装
 
 首先安装编译项目前所需依赖
 
 ```bash	
-# 1. 安装系统级依赖 (OpenCV, 串口工具等)
-sudo apt update
-sudo apt install git python3-pip ros-humble-cv-bridge ros-humble-image-transport
+# 返回工作空间根目录
+cd ros2_cchess
 
-# 2. 安装 Python 依赖
-pip3 install opencv-python numpy pyserial
+# 安装ros2依赖
+sudo rosdep init
+rosdep update
+rosdep install -r --from-paths src --ignore-src --rosdistro $ROS_DISTRO -y
+
+# 安装python依赖
+sudo apt install python3-pip
+sudo apt install -y portaudio19-dev
+pip install onnxruntime PySide6 pyaudio vosk openai
 ```
 
-### 2.3 编译项目
+### 2.5 编译项目
 
 > [!NOTE]
 >
 > 在执行rosdep相关指令时，如果出现Error，忽略不计
 
 ```bash
-# 克隆本项目
-git clone https://github.com/AcidYoghurt/ros2_cchess.git
-
-# 返回工作空间根目录
-cd cchess_ws
-
-# 安装ros2依赖
-rosdep init
-rosdep update
-rosdep install -r --from-paths src --ignore-src --rosdistro $ROS_DISTRO -y
-
-# 安装python依赖
-pip install onnxruntime PySide6
+. build.sh
 ```
 
 
 
 ## 3. 代码框架
 
-```Mermaid
+```mermaid
 graph LR
     A[摄像头&虚拟棋盘] -->|图像数据 /camera/image_raw & 棋盘数据 /fen_topic| B(棋盘管理节点 Vision_Node)
     B -->|棋盘状态 FEN串| C(决策节点 Logic_Node)
@@ -267,11 +271,11 @@ config
 
   - **初始点**：
 
-    ![初始点.png](https://free.picui.cn/free/2026/01/21/6970841cbcf1c.png)
+    <img src="https://free.picui.cn/free/2026/01/21/6970841cbcf1c.png" alt="初始点.png" style="zoom: 25%;" />
 
   - **自定义原点（防止碰撞）**：
 
-    ![自定义原点.png](https://free.picui.cn/free/2026/01/21/6970841d6be30.png)
+    <img src="https://free.picui.cn/free/2026/01/21/6970841d6be30.png" alt="自定义原点.png" style="zoom: 25%;" />
 
 - ```points_to_move.yaml```：该文件是专门为了machinery_keyboard_control中的machinery_keypoint_debug_node.py调试用，规定要走什么点位
 

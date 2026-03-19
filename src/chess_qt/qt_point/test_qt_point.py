@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHeaderView, QLineEdit)
 from PySide6.QtGui import QPixmap, QFont, QRegularExpressionValidator
 from PySide6.QtCore import Qt, QRegularExpression
-from ament_index_python import get_package_share_directory
+from ament_index_python.packages import get_package_share_directory
 
 class RoboticArmEditor(QMainWindow):
     def __init__(self):

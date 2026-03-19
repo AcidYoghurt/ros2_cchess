@@ -129,7 +129,9 @@ def machinery_ros2control(context: launch.LaunchContext):
     return [control_node, robot_state_pub_node, cartesian_position_controller_spawner, gripper_controller_spawner]
 
 # 键盘节点
-def machinery_keypoint():
+def machinery_keypoint(context):
+    namespace_str = namespace.perform(context)
+    config_path_str = config_path.perform(context)
     machinery_config = PathJoinSubstitution([config_path,'machinery',namespace,'machinery.yaml'])
     
     machinery_keyboard_node = Node(
@@ -138,7 +140,10 @@ def machinery_keypoint():
         namespace=namespace,
         output="both",
         parameters=[
-            {"namespace": namespace},
+            {
+                "namespace": namespace,
+                "csv_path": os.path.join(config_path_str,'machinery',namespace_str,'position.csv')
+            },
             machinery_config
         ],
         prefix="xterm -e",
@@ -148,7 +153,7 @@ def machinery_keypoint():
 def generate_launch_description():
     declare_parameters_node = declare_parameters()
     machinery_ros2control_node = [OpaqueFunction(function=machinery_ros2control)]
-    machinery_keypoint_node = machinery_keypoint()
+    machinery_keypoint_node = [OpaqueFunction(function=machinery_keypoint)]
 
     return LaunchDescription(
         declare_parameters_node +

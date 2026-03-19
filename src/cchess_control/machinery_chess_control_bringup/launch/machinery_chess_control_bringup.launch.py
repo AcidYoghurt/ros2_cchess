@@ -27,13 +27,13 @@ baud_rate = LaunchConfiguration("baud_rate")
 def declare_parameters():
     config_path_arg = DeclareLaunchArgument(
         name='config_path',
-        default_value=str(os.path.join(get_package_share_directory('machinery_chess_ros_control_bringup'),'config','machinery')),
+        default_value=str(os.path.join(get_package_share_directory('machinery_chess_control_bringup'),'config','machinery')),
         description='config文件夹 的 路径'
     )
 
     urdf_path_arg = DeclareLaunchArgument(
         name='urdf_path',
-        default_value=str(os.path.join(get_package_share_directory('machinery_chess_ros_control_bringup'),'urdf')),
+        default_value=str(os.path.join(get_package_share_directory('machinery_chess_control_bringup'),'urdf')),
         description='URDF文件夹 的 路径'
     )
 

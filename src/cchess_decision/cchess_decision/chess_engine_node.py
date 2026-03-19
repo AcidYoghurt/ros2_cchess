@@ -90,7 +90,7 @@ class ChessEngineNode(Node):
     # ===============================================================
     def get_engine_path(self):
         possible_paths = [
-            "src/cchess_ros_decision/resource/pikafish",
+            "src/cchess_decision/resource/pikafish",
             "pikafish",
             "./pikafish",
             "/usr/games/pikafish"
