@@ -6,14 +6,15 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QTableWidgetItem, QLabel, QMessageBox, QTabWidget, QHeaderView)
 from PySide6.QtGui import QPixmap, QFont
 from PySide6.QtCore import Qt
+from ament_index_python.packages import get_package_share_directory
 
 class RoboticArmEditor(QMainWindow):
     def __init__(self):
         super().__init__()
         # 文件路径
         self.paths = {
-            "左机械臂 (Left)": "~/Desktop/ros2_cchess/src/Machinery_chess/machinery_chess_bringup/config/machinery/left/position.csv",
-            "右机械臂 (Right)": "~/Desktop/ros2_cchess/src/Machinery_chess/machinery_chess_bringup/config/machinery/right/position.csv"
+            "左机械臂 (Left)": os.path.join(get_package_share_directory("machinery_chess_bringup"),"config","machinery","left","position.csv"),
+            "右机械臂 (Right)": os.path.join(get_package_share_directory("machinery_chess_bringup"),"config","machinery","right","position.csv"),
         }
         self.tables = {} 
         self.init_ui()

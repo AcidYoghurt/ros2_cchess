@@ -9,14 +9,15 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHeaderView, QLineEdit)
 from PySide6.QtGui import QPixmap, QFont, QRegularExpressionValidator
 from PySide6.QtCore import Qt, QRegularExpression
+from ament_index_python import get_package_share_directory
 
 class RoboticArmEditor(QMainWindow):
     def __init__(self):
         super().__init__()
         # 串口配置：请根据实际设备路径修改（如 /dev/ttyUSB0）
         self.config = {
-            "左机械臂 (Left)": {"path": "/home/chess/Desktop/ros2_cchess/src/cchess_ros_control/machinery_chess_ros_control_bringup/config/machinery/left/position.csv", "port": "/dev/machineryLeftA"},
-            "右机械臂 (Right)": {"path": "/home/chess/Desktop/ros2_cchess/src/cchess_ros_control/machinery_chess_ros_control_bringup/config/machinery/right/position.csv", "port": "/dev/machineryRightB"}
+            "左机械臂 (Left)": {"path": os.path.join(get_package_share_directory("machinery_chess_bringup"),"config","machinery","left","position.csv"), "port": "/dev/machineryLeftA"},
+            "右机械臂 (Right)": {"path": os.path.join(get_package_share_directory("machinery_chess_bringup"),"config","machinery","right","position.csv"), "port": "/dev/machineryRightB"}
         }
         
         # 点位顺序序列

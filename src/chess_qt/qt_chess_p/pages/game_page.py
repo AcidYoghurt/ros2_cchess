@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtSvgWidgets import QSvgWidget
+from ament_index_python import get_package_share_directory
 
 # ================= 语音识别线程 =================
 class VoiceRecognitionThread(QThread):
@@ -33,7 +34,7 @@ class VoiceRecognitionThread(QThread):
     def __init__(self, model_path):
         super().__init__()
         # 模型路径检测
-        actual_path = model_path if os.path.exists(model_path) else "/home/chess/Desktop/ros2_cchess/src/qt_chess_p/resources/vosk-model-small-cn-0.22"
+        actual_path = model_path if os.path.exists(model_path) else "/home/test/Desktop/ros2_cchess/src/qt_chess_p/resources/vosk-model-small-cn-0.22"
         self.model = Model(actual_path)
         self.grammar = ["帅", "仕", "相", "马", "车", "炮", "兵", "将", "士", "象", "卒", "进", "退", "平", "一", "二", "三", "四", "五", "六", "七", "八", "九"]
         self.rec = KaldiRecognizer(self.model, 16000, json.dumps(self.grammar, ensure_ascii=False))
