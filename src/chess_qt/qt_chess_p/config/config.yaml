@@ -2,7 +2,7 @@
 HUMAN_AI:
   - name: "machinery_chess_bringup.launch.py"	# launch文件名（所有launch文件的都是位于ros2_chess_bringup目录中）
     parameters:	# 该launch文件需要的参数
-      serial_port_name: "/dev/machineryRightB"	
+      serial_port_name: "/dev/machineryRightB"
       namespace: "right/"
   - name: "machinery_chess_bringup.launch.py"
     parameters:

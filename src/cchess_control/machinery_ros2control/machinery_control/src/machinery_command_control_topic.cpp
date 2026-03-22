@@ -18,7 +18,7 @@
 // 发送目标点：ros2 topic pub --once /left/ai_move_topic std_msgs/msg/String "{data: 'a1,a2,b1,b2'}"
 
 // 状态机，用于表示机械臂状态
-enum class MachineryStatus
+enum class MachineryStatus : uint8_t
 {
     IDLE,
     BUSY
@@ -66,11 +66,14 @@ public:
         // 订阅棋盘点位
         chess_points_sub_ = this->create_subscription<std_msgs::msg::String>(
             "chess/points_json", 10,
-            std::bind(&MachineryCommandControlNode::chess_points_json_callback, this, std::placeholders::_1));
+            [this](std_msgs::msg::String::SharedPtr msg){chess_points_json_callback(std::move(msg));}
+            );
 
         // 接收指令数据
         command_control_topic_ = this->create_subscription<std_msgs::msg::String>(
-            "ai_move_topic",10,std::bind(&MachineryCommandControlNode::process_task,this,std::placeholders::_1));
+            "ai_move_topic",10,
+            [this](std_msgs::msg::String::SharedPtr msg){process_task(std::move(msg));}
+            );
 
         // 发布机械臂目标点
         arm_command_pub_ = this->create_publisher<cartesian_move_controller::CartesianMoveController::ControllerReferenceMsg>(
@@ -98,12 +101,11 @@ public:
         RCLCPP_INFO(this->get_logger(), "机械臂指令控制节点已启动.");
     }
 
-    ~MachineryCommandControlNode()
-    {
-    }
+    ~MachineryCommandControlNode() override = default;
+
 private:
     // --- 工具函数 ---
-    void control_cartesian_point(cartesian_move_controller::CartesianMoveController::ControllerReferenceMsg cartesian_move_cmd)
+    void control_cartesian_point(const cartesian_move_controller::CartesianMoveController::ControllerReferenceMsg& cartesian_move_cmd)
     {
         // 等待机械臂空闲才进入函数
         MachineryStatus status;
@@ -140,7 +142,7 @@ private:
         }
     }
 
-    void control_gripper(gripper_suction_controller::GripperSuctionController::ControllerReferenceMsg suction_cmd)
+    void control_gripper(const gripper_suction_controller::GripperSuctionController::ControllerReferenceMsg& suction_cmd)
     {
         // 等待机械臂空闲才进入函数
         MachineryStatus status;
@@ -196,7 +198,7 @@ private:
         last_task_status[1] = gripper_status->set_point;
     }
 
-    void chess_points_json_callback(const std_msgs::msg::String::SharedPtr msg)
+    void chess_points_json_callback(std_msgs::msg::String::SharedPtr msg)
     {
         if (!is_chess_points_received) {
             try
@@ -211,6 +213,7 @@ private:
                 std_msgs::msg::String qt_msg = std_msgs::msg::String();
                 qt_msg.data = '['+std::string(this->get_name())+']' + "已成功接收并解析棋盘点位数据";
                 qt_debug_msg_pub->publish(qt_msg);
+                // DEBUG信息
                 // for (const auto& [key, coords] : chess_points_) {
                 //     RCLCPP_INFO(this->get_logger(), "点 %s: [%.3f, %.3f, %.3f]",key.c_str(), coords[0], coords[1], coords[2]);
                 // }
@@ -226,7 +229,7 @@ private:
         }
     }
 
-    void process_task(std_msgs::msg::String msg)
+    void process_task(std_msgs::msg::String::SharedPtr msg)
     {
         if (is_running)
         {
@@ -247,10 +250,10 @@ private:
 
         std::vector<std::string> point_to_move;
         size_t start = 0;
-        size_t end = msg.data.find(',');
+        size_t end = msg->data.find(',');
         // 循环处理逗号分隔的部分
         while (end != std::string::npos) {
-            std::string token = msg.data.substr(start, end - start);
+            std::string token = msg->data.substr(start, end - start);
 
             size_t token_start = token.find_first_not_of(" \t");
             size_t token_end = token.find_last_not_of(" \t");
@@ -260,11 +263,11 @@ private:
             }
 
             start = end + 1;
-            end = msg.data.find(',', start);
+            end = msg->data.find(',', start);
         }
 
         // 处理最后一个点（因为后面没有逗号）
-        std::string token = msg.data.substr(start);
+        std::string token = msg->data.substr(start);
         size_t token_start = token.find_first_not_of(" \t");
         size_t token_end = token.find_last_not_of(" \t");
         if (token_start != std::string::npos) {
@@ -272,9 +275,9 @@ private:
         }
         RCLCPP_INFO(this->get_logger(), "收到新的移动序列任务，包含 %zu 个点", point_to_move.size());
 
-        std::thread(&MachineryCommandControlNode::command_callback, this,point_to_move).detach();
+        std::thread(&MachineryCommandControlNode::command_callback, this, std::ref(point_to_move)).detach();
     }
-    void command_callback(std::vector<std::string> point_to_move) {
+    void command_callback(const std::vector<std::string>& point_to_move) {
         struct StateGuard {
             std::atomic<bool>& flag;
             StateGuard(std::atomic<bool>& f) : flag(f) { flag = true; }
