@@ -1,3 +1,4 @@
+import os
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
@@ -10,7 +11,10 @@ import threading
 class ChessCameraPublisher(Node):
     def __init__(self):
         super().__init__('chess_camera_publisher')
-        
+        self.temp_dir = 'temp'
+        if not os.path.exists(self.temp_dir):
+            os.makedirs(self.temp_dir)
+            self.get_logger().info(f"已创建临时目录: {self.temp_dir}")
         # 创建两个发布者，分别用于移动前和移动后的图像
         self.publisher_before = self.create_publisher(Image, 'image_before_move', 10)
         self.publisher_after = self.create_publisher(Image, 'image_after_move', 10)
@@ -109,7 +113,9 @@ class ChessCameraPublisher(Node):
         """捕获移动前图像并发布"""
         if self.camera_active and self.current_frame is not None:
             self.before_image = self.current_frame.copy()
-            print("已捕获移动前图像")
+            save_path = os.path.join(self.temp_dir, 'debug_before.jpg')
+            cv2.imwrite(save_path, self.before_image)
+            print(f"已捕获并保存移动前图像至: {save_path}")
             self.publish_images()
         else:
             print("捕获移动前图像失败")
@@ -118,7 +124,9 @@ class ChessCameraPublisher(Node):
         """捕获移动后图像并发布"""
         if self.camera_active and self.current_frame is not None:
             self.after_image = self.current_frame.copy()
-            print("已捕获移动后图像")
+            save_path = os.path.join(self.temp_dir, 'debug_after.jpg')
+            cv2.imwrite(save_path, self.after_image)
+            print(f"已捕获并保存移动后图像至: {save_path}")
             self.publish_images()
         else:
             print("捕获移动后图像失败")

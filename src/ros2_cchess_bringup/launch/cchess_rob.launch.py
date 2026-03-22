@@ -5,7 +5,7 @@ def generate_launch_description():
     return LaunchDescription([
         # 象棋引擎节点
         Node(
-            package='cchess_ros',
+            package='cchess_decision',
             executable='chess_engine_node',
             name='chess_engine_node',
             output='screen',
@@ -14,7 +14,7 @@ def generate_launch_description():
         
         # 机器人引擎节点
         Node(
-            package='cchess_ros',
+            package='cchess_decision',
             executable='rob_engine_node',
             name='rob_engine_node',
             output='screen',

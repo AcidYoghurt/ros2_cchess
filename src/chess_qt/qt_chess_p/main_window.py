@@ -230,7 +230,7 @@ class MainWindow(QMainWindow):
         for launch_file in launch_config[game_mode]:
             command = [
                 'ros2', 'launch',
-                'ros2_chess_bringup',  # 你的功能包名称
+                'ros2_cchess_bringup',  # 你的功能包名称
                 launch_file['name']
             ]
             for param_name, param_value in launch_file['parameters'].items():

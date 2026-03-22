@@ -4,7 +4,7 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from std_msgs.msg import String
 from ament_index_python.packages import get_package_share_directory
-
+import numpy as np
 import os
 import cv2
 import traceback
@@ -93,6 +93,48 @@ class ChessboardRecognizerNode(Node):
         self.image_after_move = msg
         self.process_move()
 
+     # ======================================================
+    # 新增：图像增强（只在识别失败时使用）
+    # ======================================================
+
+    def enhance_images(self, img_bgr):
+        results = []
+
+        # 亮度 + 对比度
+        results.append(
+            cv2.convertScaleAbs(img_bgr, alpha=1.3, beta=25)
+        )
+
+        # CLAHE
+        lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        clahe = cv2.createCLAHE(2.0, (8, 8))
+        l = clahe.apply(l)
+        results.append(
+            cv2.cvtColor(cv2.merge((l, a, b)), cv2.COLOR_LAB2BGR)
+        )
+
+        # HSV 红黑增强
+        hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
+        h, s, v = cv2.split(hsv)
+        s = cv2.add(s, 30)
+        v = cv2.add(v, 15)
+        results.append(
+            cv2.cvtColor(cv2.merge((h, s, v)), cv2.COLOR_HSV2BGR)
+        )
+
+        # 轻度锐化
+        kernel = np.array([[0, -1, 0],
+                           [-1, 5, -1],
+                           [0, -1, 0]])
+        results.append(
+            cv2.filter2D(img_bgr, -1, kernel)
+        )
+
+        return results
+
+
+
     # ============================================================
     # 棋盘识别逻辑
     # ============================================================
@@ -101,31 +143,43 @@ class ChessboardRecognizerNode(Node):
             self.get_logger().error('核心检测器未初始化')
             return None
 
-        image_rgb = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+        def _run(img_bgr):
+            img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+            _, _, cells_labels_str, _, time_info = \
+                self.detector.pred_detect_board_and_classifier(img_rgb)
 
-        try:
-            _, _, cells_labels_str, _, time_info = self.detector.pred_detect_board_and_classifier(image_rgb)
-            annotation_10_rows = [item for item in cells_labels_str.split("\n")]
-            annotation_arr_10_9_short = [list(item) for item in annotation_10_rows]
+            rows = cells_labels_str.split("\n")
+            board_arr = [list(r) for r in rows]
 
-            fen_string = generate_fen_string(annotation_arr_10_9_short)
-            self.get_logger().info(f'识别到棋盘FEN: {fen_string}')
             self.get_logger().info(f'识别耗时: {time_info}')
+            return board_arr
 
-            # 检查是否上下颠倒
-            if is_board_flipped_by_kings(annotation_arr_10_9_short):
-                self.get_logger().warn("检测到棋盘颠倒，自动旋转180度")
-                annotation_arr_10_9_short = [row[::-1] for row in annotation_arr_10_9_short[::-1]]
+        # ---------- 第一次：原图 ----------
+        try:
+            board = _run(cv_image)
+            if board:
+                return board
+        except Exception:
+            pass
 
-            return annotation_arr_10_9_short
+        # ---------- 第二次：增强图 ----------
+        self.get_logger().warn('原图识别失败，尝试增强图')
+        for enhanced in self.enhance_images(cv_image):
+            try:
+                board = _run(enhanced)
+                if board:
+                    self.get_logger().warn('增强图识别成功')
+                    return board
+            except Exception:
+                continue
 
-        except Exception as e:
-            self.get_logger().error(f'棋盘检测失败: {e}')
-            self.get_logger().error(traceback.format_exc())
-            wrong_msg = String()
-            wrong_msg.data = f'wrong_image: 棋盘检测失败: {e}'
-            self.status_publisher.publish(wrong_msg)
-            return None
+        # ---------- 全部失败 ----------
+        self.get_logger().error('原图 + 增强图 均无法识别棋盘')
+        wrong_msg = String()
+        wrong_msg.data = 'wrong_image: board recognition failed'
+        self.status_publisher.publish(wrong_msg)
+        return None
+
 
     # ============================================================
     # 核心处理逻辑
@@ -136,39 +190,67 @@ class ChessboardRecognizerNode(Node):
             return
 
         try:
-            cv_image_after = self.bridge.imgmsg_to_cv2(self.image_after_move, desired_encoding='bgr8')
+            cv_image_after = self.bridge.imgmsg_to_cv2(
+                self.image_after_move,
+                desired_encoding='bgr8'
+            )
 
-            # FEN 转二维数组
             board_before = fen_to_board(self.fen_before_move)
-            # 检查并修正方向（防止前后反转）
             if is_board_flipped_by_kings(board_before):
                 self.get_logger().warn("移动前FEN方向为反，自动旋转180度")
                 board_before = [row[::-1] for row in board_before[::-1]]
 
-            # 棋盘识别
-            self.get_logger().info('--- 识别移动后棋盘 ---')
+            # ====================================================
+            # 第一次：原图完整流程
+            # ====================================================
+            self.get_logger().info('--- 原图识别移动 ---')
             board_after = self.detect_board_from_image(cv_image_after)
 
+            fen1, move_str = None, None
             if board_after:
-                fen1, move_str = compare_and_generate_move_fen(board_before, board_after)
-                if fen1 and move_str:
-                    result = f"FEN: {fen1}, Move: {move_str}"
-                    self.get_logger().info(f"检测到移动: {result}")
-                    msg = String()
-                    msg.data = result
-                    self.chess_move_publisher.publish(msg)
-                else:
-                    self.get_logger().info("未检测到有效移动:")
-                    wrong_msg = String()
-                    wrong_msg.data = f'未检测到有效移动:{fen1}'
-                    self.status_publisher.publish(wrong_msg)
+                fen1, move_str = compare_and_generate_move_fen(
+                    board_before,
+                    board_after
+                )
+
+            # ====================================================
+            # 如果【没有检测到有效移动】，才尝试增强图
+            # ====================================================
+            if not (fen1 and move_str):
+                self.get_logger().warn(
+                    '原图未检测到有效移动，尝试增强图重新识别'
+                )
+
+                for enhanced in self.enhance_images(cv_image_after):
+                    self.get_logger().info('--- 增强图识别移动 ---')
+                    board_after = self.detect_board_from_image(enhanced)
+                    if not board_after:
+                        continue
+
+                    fen1, move_str = compare_and_generate_move_fen(
+                        board_before,
+                        board_after
+                    )
+
+                    if fen1 and move_str:
+                        self.get_logger().warn('增强图检测到有效移动')
+                        break
+
+            # ====================================================
+            # 最终结果判定
+            # ====================================================
+            if fen1 and move_str:
+                result = f"FEN: {fen1}, Move: {move_str}"
+                self.get_logger().info(f"检测到移动: {result}")
+                msg = String()
+                msg.data = result
+                self.chess_move_publisher.publish(msg)
             else:
-                self.get_logger().warn('无法从图片中识别有效棋盘')
+                self.get_logger().info("未检测到有效移动")
                 wrong_msg = String()
-                wrong_msg.data = 'no board'
+                wrong_msg.data = '未检测到有效移动'
                 self.status_publisher.publish(wrong_msg)
 
-            # 清空状态
             self.image_after_move = None
 
         except Exception as e:
@@ -179,6 +261,7 @@ class ChessboardRecognizerNode(Node):
             self.status_publisher.publish(wrong_msg)
             self.fen_before_move = None
             self.image_after_move = None
+
 
 
 def main(args=None):

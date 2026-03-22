@@ -1,7 +1,7 @@
 # 人机模式
 HUMAN_AI:
-  - name: "machinery_chess_bringup.launch.py"	# launch文件名（所有launch文件的都是位于ros2_chess_bringup目录中）
-    parameters:	# 该launch文件需要的参数
+  - name: "machinery_chess_bringup.launch.py" # launch文件名（所有launch文件的都是位于ros2_cchess_bringup目录中）
+    parameters: # 该launch文件需要的参数
       serial_port_name: "/dev/machineryRightB"
       namespace: "right/"
   - name: "machinery_chess_bringup.launch.py"
@@ -9,7 +9,7 @@ HUMAN_AI:
       serial_port_name: "/dev/machineryLeftA"
       namespace: "left/"
   - name: "cchess_person.launch.py"
-    parameters: {}	# 表示参数为空
+    parameters: {} # 表示参数为空
 
 # 机机模式
 AI_AI:

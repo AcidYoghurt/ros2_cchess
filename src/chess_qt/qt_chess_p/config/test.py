@@ -7,7 +7,7 @@ if __name__ == '__main__':
         # 为每个机械臂构建独立的命令
         command = [
             'ros2', 'launch',
-            'ros2_chess_bringup',
+            'ros2_cchess_bringup',
             launch_file['name']
         ]
         for parameter_name,parameter_value in launch_file['parameters'].items():

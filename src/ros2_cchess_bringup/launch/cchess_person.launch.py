@@ -5,7 +5,7 @@ def generate_launch_description():
     return LaunchDescription([
         # 棋盘识别节点
         Node(
-            package='cchess_ros',
+            package='cchess_decision',
             executable='chessboard_recognizer_node',
             name='chessboard_recognizer_node',
             output='screen',
@@ -14,7 +14,7 @@ def generate_launch_description():
         
         # 象棋引擎节点
         Node(
-            package='cchess_ros',
+            package='cchess_decision',
             executable='chess_engine_node',
             name='chess_engine_node',
             output='screen',
@@ -23,7 +23,7 @@ def generate_launch_description():
         
         # 相机发布节点
         Node(
-            package='cchess_ros',
+            package='cchess_decision',
             executable='chess_camera_publisher',
             name='chess_camera_publisher',
             output='screen',

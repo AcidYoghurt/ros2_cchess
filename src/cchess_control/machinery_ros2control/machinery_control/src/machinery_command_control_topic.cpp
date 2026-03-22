@@ -120,7 +120,7 @@ private:
         // 只有发送命令不一致的时候才需要 发布指令 和 修改机械臂状态
         for (size_t i=0;i<cartesian_move_cmd.displacements.size();i++)
         {
-            if (abs(last_cartesian_command[i] - cartesian_move_cmd.displacements[i])>error)
+            if (std::fabs(last_cartesian_command[i] - cartesian_move_cmd.displacements[i])>error)
             {
                 // 发布指令
                 arm_command_pub_->publish(cartesian_move_cmd);
@@ -156,7 +156,7 @@ private:
         // 只有发送命令不一致的时候才需要 发布指令 和 修改机械臂状态
         for (size_t i=0;i<suction_cmd.displacements.size();i++)
         {
-            if (abs(last_gripper_command[i] - suction_cmd.displacements[i])>error)
+            if (std::fabs(last_gripper_command[i] - suction_cmd.displacements[i])>error)
             {
                 // 发布指令
                 gripper_command_pub_->publish(suction_cmd);
@@ -237,7 +237,6 @@ private:
             return;
         }
 
-        is_running = true;
         RCLCPP_INFO(this->get_logger(), "收到新的移动序列任务");
         if (chess_points_.empty())
         {
@@ -275,9 +274,10 @@ private:
         }
         RCLCPP_INFO(this->get_logger(), "收到新的移动序列任务，包含 %zu 个点", point_to_move.size());
 
-        std::thread(&MachineryCommandControlNode::command_callback, this, std::ref(point_to_move)).detach();
+        is_running = true;
+        std::thread(&MachineryCommandControlNode::command_callback, this, point_to_move).detach();
     }
-    void command_callback(const std::vector<std::string>& point_to_move) {
+    void command_callback(const std::vector<std::string> point_to_move) {
         struct StateGuard {
             std::atomic<bool>& flag;
             StateGuard(std::atomic<bool>& f) : flag(f) { flag = true; }

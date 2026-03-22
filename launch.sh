@@ -1,5 +1,5 @@
 #!/bin/bash
-conda activate ros2_cchess
+#conda activate ros2_cchess
 source /opt/ros/humble/setup.bash
 source install/setup.bash 
 python3 src/chess_qt/qt_chess_p/main.py 
