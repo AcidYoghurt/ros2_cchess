@@ -61,6 +61,261 @@ class ChineseChessGame:
             logger.error(f"引擎启动失败: {e}")
             return False
 
+    def _build_limit(self, time_limit=None, depth=None):
+        """构建引擎分析限制条件"""
+        limit_kwargs = {}
+        if time_limit is not None:
+            limit_kwargs["time"] = time_limit
+        if depth is not None:
+            limit_kwargs["depth"] = depth
+
+        # 默认使用实例中的思考时间
+        if not limit_kwargs:
+            limit_kwargs["time"] = self.think_time
+        return cchess.engine.Limit(**limit_kwargs)
+
+    def _score_to_dict(self, pov_score):
+        """将引擎分数对象转为可序列化字典"""
+        if pov_score is None:
+            return {
+                "cp": None,
+                "mate": None,
+                "is_mate": False,
+                "score_for_compare": None
+            }
+
+        return {
+            "cp": pov_score.score(),
+            "mate": pov_score.mate(),
+            "is_mate": pov_score.is_mate(),
+            "score_for_compare": pov_score.score(mate_score=100000)
+        }
+
+    def analyse_position(self, board=None, perspective=None, time_limit=None, depth=12, multipv=1):
+        """
+        分析一个局面并返回评分和主变化。
+
+        Args:
+            board: 可选，指定要分析的棋盘；默认分析当前 self.board
+            perspective: 评分视角（cchess.RED/cchess.BLACK）；默认当前行棋方
+            time_limit: 单次分析时间（秒），优先于默认 think_time
+            depth: 搜索深度（可与 time_limit 一起使用）
+            multipv: 返回前N条主变化
+
+        Returns:
+            dict: 包含评分、bestmove、pv等信息
+        """
+        if self.engine is None:
+            started = self.start_engine()
+            if not started:
+                raise RuntimeError("引擎未启动，无法分析局面")
+
+        working_board = board if board is not None else self.board
+        pov = working_board.turn if perspective is None else perspective
+        limit = self._build_limit(time_limit=time_limit, depth=depth)
+
+        info_flags = cchess.engine.INFO_SCORE | cchess.engine.INFO_PV | cchess.engine.INFO_BASIC
+        info = self.engine.analyse(working_board, limit, info=info_flags, multipv=max(1, int(multipv)))
+
+        lines = info if isinstance(info, list) else [info]
+        variations = []
+        for line in lines:
+            pv = line.get("pv", []) or []
+            score_obj = line.get("score")
+            pov_score = score_obj.pov(pov) if score_obj else None
+            variations.append({
+                "pv": [mv.uci() for mv in pv],
+                "bestmove": pv[0].uci() if pv else None,
+                "score": self._score_to_dict(pov_score),
+                "depth": line.get("depth"),
+                "nodes": line.get("nodes"),
+                "time": line.get("time")
+            })
+
+        best = variations[0] if variations else {
+            "pv": [],
+            "bestmove": None,
+            "score": self._score_to_dict(None),
+            "depth": None,
+            "nodes": None,
+            "time": None
+        }
+        return {
+            "fen": working_board.fen(),
+            "turn": "RED" if working_board.turn == cchess.RED else "BLACK",
+            "perspective": "RED" if pov == cchess.RED else "BLACK",
+            "bestmove": best["bestmove"],
+            "pv": best["pv"],
+            "score": best["score"],
+            "depth": best["depth"],
+            "nodes": best["nodes"],
+            "time": best["time"],
+            "multipv": variations
+        }
+
+    def analyse_move(self, move_uci, board=None, time_limit=None, depth=12):
+        """
+        分析某一步棋质量，输出该步的CP损失（Centipawn Loss）。
+
+        Returns:
+            dict: {
+                "move": str,
+                "is_legal": bool,
+                "bestmove": str|None,
+                "is_bestmove": bool,
+                "cp_loss": int|None,
+                "quality": str,
+                "before": dict,
+                "after": dict,
+                "error": str|None
+            }
+        """
+        working_board = board.copy(stack=True) if board is not None else self.board.copy(stack=True)
+        mover = working_board.turn
+
+        before = self.analyse_position(
+            board=working_board,
+            perspective=mover,
+            time_limit=time_limit,
+            depth=depth,
+            multipv=1
+        )
+
+        try:
+            move = cchess.Move.from_uci(move_uci)
+        except Exception as e:
+            return {
+                "move": move_uci,
+                "is_legal": False,
+                "bestmove": before.get("bestmove"),
+                "is_bestmove": False,
+                "cp_loss": None,
+                "quality": "illegal",
+                "before": before,
+                "after": None,
+                "error": f"UCI解析失败: {e}"
+            }
+
+        if move not in working_board.legal_moves:
+            return {
+                "move": move_uci,
+                "is_legal": False,
+                "bestmove": before.get("bestmove"),
+                "is_bestmove": False,
+                "cp_loss": None,
+                "quality": "illegal",
+                "before": before,
+                "after": None,
+                "error": "非法走子"
+            }
+
+        working_board.push(move)
+        after = self.analyse_position(
+            board=working_board,
+            perspective=mover,
+            time_limit=time_limit,
+            depth=depth,
+            multipv=1
+        )
+
+        before_score = before["score"]["score_for_compare"]
+        after_score = after["score"]["score_for_compare"]
+        cp_loss = None
+        if before_score is not None and after_score is not None:
+            cp_loss = before_score - after_score
+
+        if cp_loss is None:
+            quality = "unknown"
+        elif cp_loss <= 20:
+            quality = "excellent"
+        elif cp_loss <= 60:
+            quality = "good"
+        elif cp_loss <= 120:
+            quality = "inaccuracy"
+        elif cp_loss <= 250:
+            quality = "mistake"
+        else:
+            quality = "blunder"
+
+        return {
+            "move": move_uci,
+            "is_legal": True,
+            "bestmove": before.get("bestmove"),
+            "is_bestmove": before.get("bestmove") == move_uci,
+            "cp_loss": cp_loss,
+            "quality": quality,
+            "before": before,
+            "after": after,
+            "error": None
+        }
+
+    def score_moves(self, moves_uci, initial_fen=None, time_limit=None, depth=12):
+        """
+        给一盘棋（UCI走子序列）逐步打分。
+
+        Args:
+            moves_uci: list[str] 走子序列，如 ["h2e2", "h9g7", ...]
+            initial_fen: 可选，起始局面FEN；默认当前局面
+            time_limit: 每步分析时间（秒）
+            depth: 每步搜索深度
+
+        Returns:
+            dict: 包含每一步评分、平均CP损失、失误统计
+        """
+        analysis_board = self.board.copy(stack=True)
+        if initial_fen:
+            analysis_board.set_fen(initial_fen)
+
+        per_move = []
+        valid_cp_loss = []
+        quality_counter = {
+            "excellent": 0,
+            "good": 0,
+            "inaccuracy": 0,
+            "mistake": 0,
+            "blunder": 0,
+            "illegal": 0,
+            "unknown": 0
+        }
+
+        for ply, move_uci in enumerate(moves_uci, start=1):
+            mover = analysis_board.turn
+            side = "RED" if mover == cchess.RED else "BLACK"
+            move_result = self.analyse_move(
+                move_uci=move_uci,
+                board=analysis_board,
+                time_limit=time_limit,
+                depth=depth
+            )
+            move_result["ply"] = ply
+            move_result["side"] = side
+            per_move.append(move_result)
+
+            quality = move_result.get("quality", "unknown")
+            if quality not in quality_counter:
+                quality = "unknown"
+            quality_counter[quality] += 1
+
+            cp_loss = move_result.get("cp_loss")
+            if cp_loss is not None:
+                valid_cp_loss.append(cp_loss)
+
+            # 非法走子后停止后续分析
+            if not move_result["is_legal"]:
+                break
+
+            analysis_board.push(cchess.Move.from_uci(move_uci))
+
+        average_cp_loss = sum(valid_cp_loss) / len(valid_cp_loss) if valid_cp_loss else None
+        return {
+            "start_fen": initial_fen if initial_fen else self.board.fen(),
+            "end_fen": analysis_board.fen(),
+            "move_count": len(per_move),
+            "average_cp_loss": average_cp_loss,
+            "quality_counter": quality_counter,
+            "moves": per_move
+        }
+
     def make_player_move(self, move_uci):
         """
         执行玩家移动

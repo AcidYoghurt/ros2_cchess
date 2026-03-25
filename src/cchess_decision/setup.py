@@ -28,7 +28,8 @@ setup(
             'chessboard_recognizer_node = cchess_decision.chessboard_recognizer_node:main',
             'chess_engine_node = cchess_decision.chess_engine_node:main', 
             'chess_camera_publisher = cchess_decision.chess_camera:main',
-            'rob_engine_node = cchess_decision.rob_engine_node:main'
+            'rob_engine_node = cchess_decision.rob_engine_node:main',
+            'rob_voice_node = cchess_decision.rob_voice_node:main'
         ],
     },
 )

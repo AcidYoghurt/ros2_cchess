@@ -7,7 +7,9 @@ import cchess
 import cchess.svg
 import cairosvg
 import pyaudio
-from vosk import Model, KaldiRecognizer
+import dashscope
+import difflib
+from dashscope.audio.asr import Recognition, RecognitionCallback, RecognitionResult
 
 from PySide6.QtCore import (
     Qt, Signal, Slot, QTimer, QEvent, QThread,
@@ -23,63 +25,149 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtSvgWidgets import QSvgWidget
-
-# ================= 语音识别线程 =================
+# 填入你的阿里云 DashScope API Key
+dashscope.api_key = "sk-4298611ab58b48f9a5deef4ba7d7ea2e"
+# ================= 语音识别与大模型解析线程 =================
 class VoiceRecognitionThread(QThread):
-    recognized_move_signal = Signal(str)    # 最终识别出的 UCI 走法
-    partial_result_signal = Signal(str)     # 实时识别的中间文字
-    status_signal = Signal(str)             # 状态提示
+    recognized_move_signal = Signal(str)
+    partial_result_signal = Signal(str)
+    status_signal = Signal(str)
+    finished_signal = Signal()
 
-    def __init__(self, model_path):
+    def __init__(self, api_key=None):
         super().__init__()
-        # 模型路径检测
-        actual_path = model_path if os.path.exists(model_path) else "/home/test/Desktop/ros2_cchess/src/qt_chess_p/resources/vosk-model-small-cn-0.22"
-        self.model = Model(actual_path)
-        self.grammar = ["帅", "仕", "相", "马", "车", "炮", "兵", "将", "士", "象", "卒", "进", "退", "平", "一", "二", "三", "四", "五", "六", "七", "八", "九"]
-        self.rec = KaldiRecognizer(self.model, 16000, json.dumps(self.grammar, ensure_ascii=False))
-        self.rec.SetWords(True)
         self._is_running = False
         self.current_fen = ""
+        self.full_transcript = "" # 新增：用于记录本轮录音的所有文字
 
     def run(self):
-        p = pyaudio.PyAudio()
-        stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=8000)
-        stream.start_stream()
         self._is_running = True
+        self.full_transcript = "" 
         
-        self.status_signal.emit("请下指令...")
+        class ASRCallback(RecognitionCallback):
+            def __init__(self, outer):
+                self.outer = outer
+            def on_event(self, result: RecognitionResult):
+                sentence = result.get_sentence()
+                if sentence:
+                    text = sentence.get('text', '')
+                    if text:
+                        # 实时更新 UI 预览
+                        self.outer.partial_result_signal.emit(text)
+                        # 始终记录最新的识别内容
+                        self.outer.full_transcript = text
+
+        callback = ASRCallback(self)
+        recognition = Recognition(model='paraformer-realtime-v1', format='pcm', 
+                                  sample_rate=16000, callback=callback)
+        recognition.start()
+
+        p = pyaudio.PyAudio()
+        stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=3200)
         
         try:
             while self._is_running:
-                data = stream.read(4000, exception_on_overflow=False)
-                if self.rec.AcceptWaveform(data):
-                    # 最终识别结果
-                    result = json.loads(self.rec.Result())
-                    text = result.get("text", "").replace(" ", "")
-                    if text:
-                        self.process_text(text)
-                else:
-                    # 实时中间结果
-                    partial = json.loads(self.rec.PartialResult())
-                    partial_text = partial.get("partial", "").replace(" ", "")
-                    if partial_text:
-                        self.partial_result_signal.emit(partial_text)
+                data = stream.read(3200, exception_on_overflow=False)
+                if data:
+                    recognition.send_audio_frame(data)
         finally:
-            self._is_running = False
+            recognition.stop()
             stream.stop_stream()
             stream.close()
             p.terminate()
+            
+            # 线程停止后，如果刚才录到了话，立即交给 LLM 处理
+            if self.full_transcript:
+                self.process_text_with_llm(self.full_transcript)
 
-    def process_text(self, text):
-        board = cchess.Board(self.current_fen)
+    def process_text_with_llm(self, natural_text):
         try:
-            move = board.parse_notation(text)
-            uci = move.uci()
-            self.recognized_move_signal.emit(uci)
-            self._is_running = False 
-        except Exception:
-            self.status_signal.emit(f"无法识别: {text}")
+            # 1. 【核心修正】在发送给 AI 之前，手动反转用户口中的“左右”
+            # 因为 AI 的左右逻辑和象棋红方视角是相反的
+            corrected_text = natural_text.replace("左", "临时").replace("右", "左").replace("临时", "右")
+            print(f"DEBUG: 原始语音: {natural_text} -> 修正后发送给AI: {corrected_text}")
 
+            board = cchess.Board(self.current_fen)
+            legal_moves_notations = [board.move_to_notation(m) for m in board.legal_moves]
+
+            # 2. 构造 Prompt（此时不再强求 AI 理解镜像，顺着它的逻辑来）
+            prompt = (
+                f"你是一个专业的中国象棋语音助手，现在为【红方】服务。\n\n"
+                f"【棋盘规则】:\n"
+                f"- 红方在下方，黑方在上方。向上为“进”，向下为“退”。\n"
+                f"- 棋盘路数从右向左依次为：一、二、三、四、五、六、七、八、九。\n\n"
+                f"【当前红方合法走法列表】: {', '.join(legal_moves_notations)}\n"
+                f"【玩家语音指令】: \"{corrected_text}\"\n\n"
+                f"任务：从合法走法列表中选出最符合意图的一个，只输出四个汉字，不要解释。"
+            )
+
+            # 4. 请求大模型
+            response = dashscope.Generation.call(
+                model='qwen-turbo',
+                prompt=prompt
+            )
+            
+            if response.status_code == 200:
+                llm_output = response.output.text.strip()
+                print(f"DEBUG: LLM 原始输出: {llm_output}")
+
+                # 如果大模型判定为无关语音，直接丢弃
+                if "未知" in llm_output:
+                    self.status_signal.emit("未识别出有效的下棋指令")
+                    return
+
+                # 5. 字符清洗与繁简转换（针对红方）
+                # 过滤掉非中文字符
+                res_notation = re.sub(r'[^\u4e00-\u9fa5]', '', llm_output)
+                
+                # 核心处理：将常见的口语/简体字强制转换为 cchess 库识别的红方汉字
+                char_map = {
+                    '马': '傌', '馬': '傌',
+                    '车': '俥', '車': '俥',
+                    '象': '相',
+                    '士': '仕',
+                    '将': '帥', '帅': '帥',
+                    '卒': '兵',
+                    '砲': '炮'
+                }
+                for k, v in char_map.items():
+                    res_notation = res_notation.replace(k, v)
+
+                # 如果大模型话多，只截取最后4个字
+                if len(res_notation) > 4: 
+                    res_notation = res_notation[-4:]
+
+                # 6. 匹配验证（精确匹配 + 模糊匹配）
+                final_notation = None
+                
+                # 情况A：完全精准匹配到了合法走法
+                if res_notation in legal_moves_notations:
+                    final_notation = res_notation
+                else:
+                    # 情况B：差一两个字（如输出“傌二进”，漏了字），使用 difflib 进行相似度匹配
+                    # cutoff=0.4 表示相似度达到 40% 即可候选
+                    matches = difflib.get_close_matches(res_notation, legal_moves_notations, n=1, cutoff=0.4)
+                    if matches:
+                        final_notation = matches[0]
+                        print(f"DEBUG: 模糊匹配修正 -> '{res_notation}' 修正为 '{final_notation}'")
+
+                # 7. 最终执行
+                if final_notation:
+                    move = board.parse_notation(final_notation)
+                    uci = move.uci()
+                    self.status_signal.emit(f"识别成功: {final_notation}")
+                    self.recognized_move_signal.emit(uci)
+                else:
+                    self.status_signal.emit(f"无法匹配该走法: {res_notation}")
+            else:
+                self.status_signal.emit(f"API请求失败: {response.code}")
+
+        except Exception as e:
+            print(f"LLM Process Error: {e}")
+            self.status_signal.emit("解析过程发生异常")
+        finally:
+            self._is_running = False
+            self.finished_signal.emit() # 恢复按钮状态
     def stop(self):
         self._is_running = False
 
@@ -424,7 +512,7 @@ class GamePage(QWidget):
         self.player_color = player_color
         self.game_mode = game_mode
         self.is_voice_mode = (game_mode == "VOICE_AI")
-        
+        self.voice_thread = None
         # 1. 核心状态初始化
         self.board = cchess.Board() # 初始棋盘
         self.is_timing = False
@@ -451,10 +539,8 @@ class GamePage(QWidget):
         self.visualizer.set_orientation(self.player_color)
         self.visualizer.update_board(self.board.fen())
         self.start_timing()
-        
-        # 7. 如果是语音模式且红方先走，自动触发一次录音
-        if self.is_voice_mode and self.player_color == "RED":
-            QTimer.singleShot(1500, lambda: self.handle_voice_trigger(True))
+        if self.is_voice_mode and self.voice_thread is not None:
+            self.voice_thread.finished_signal.connect(self.reset_record_button)
 
     def setup_ui(self):
         main_layout = QHBoxLayout(self)
@@ -489,6 +575,18 @@ class GamePage(QWidget):
             self.voice_status_main.setFont(QFont("Microsoft YaHei", 32, QFont.Bold))
             self.voice_status_main.setStyleSheet("color: #95a5a6; margin-top: 10px;") # 初始灰色
             
+            # 新增：录音控制按钮
+            self.record_btn = QPushButton("🎤 开始录音")
+            self.record_btn.setMinimumHeight(80)
+            self.record_btn.setFont(QFont("Microsoft YaHei", 20, QFont.Bold))
+            self.record_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #3498db; color: white; border-radius: 15px;
+                }
+                QPushButton:hover { background-color: #2980b9; }
+            """)
+            self.record_btn.clicked.connect(self.toggle_voice_recording)
+
             # 实时识别文字内容
             self.voice_partial_label = QLabel("「 实时语音预览 」")
             self.voice_partial_label.setAlignment(Qt.AlignCenter)
@@ -504,6 +602,7 @@ class GamePage(QWidget):
             
             v_layout.addWidget(self.voice_status_main)
             v_layout.addWidget(self.voice_partial_label)
+            v_layout.addWidget(self.record_btn)
             right_panel.addWidget(self.voice_group)
 
         # B. 机机模式：显示“AI自动对弈中”
@@ -583,6 +682,25 @@ class GamePage(QWidget):
         right_panel.addWidget(self.menu_btn)
 
         main_layout.addLayout(right_panel, 2)
+
+    def toggle_voice_recording(self):
+        if not hasattr(self, 'voice_thread') or not self.voice_thread.isRunning():
+            # 开始录音
+            self.voice_thread.current_fen = self.board.fen()
+            self.voice_thread.start()
+            
+            self.record_btn.setText("🛑 停止并识别")
+            self.record_btn.setStyleSheet("background-color: #e74c3c; color: white; border-radius: 15px;")
+            self.voice_status_main.setText("● 正在听你说...")
+            self.voice_status_main.setStyleSheet("color: #e74c3c;")
+        else:
+            # 停止录音并触发 LLM
+            self.voice_thread.stop()
+            
+            self.record_btn.setText("⌛ 处理中...")
+            self.record_btn.setEnabled(False) # 暂时禁用防止重复点击
+            self.voice_status_main.setText("正在解析意图...")
+            self.voice_status_main.setStyleSheet("color: #f39c12;")
         
     def get_group_box_style(self):
         return """
@@ -596,6 +714,14 @@ class GamePage(QWidget):
             }
             QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 3px; }
         """
+    
+    def reset_record_button(self):
+        """无论解析成功还是失败，都恢复按钮为可录音状态"""
+        self.record_btn.setEnabled(True)
+        self.record_btn.setText("🎤 开始录音")
+        self.record_btn.setStyleSheet("background-color: #2ecc71; color: white; border-radius: 15px;")
+        # 清除中间识别的文字预览，为下次做准备
+        self.voice_partial_label.setText("")
 
     def setup_connections(self):
         # 连接 ROS 信号
@@ -603,10 +729,6 @@ class GamePage(QWidget):
         self.ros_node.log_signal.connect(self.append_log)
         self.ros_node.status_signal.connect(self.handle_status_update)
         
-        if self.is_voice_mode:
-            # 只有语音模式才监听触发信号
-            if hasattr(self.ros_node, "voice_record_trigger_signal"):
-                self.ros_node.voice_record_trigger_signal.connect(self.handle_voice_trigger)
 
     # ---------------- 业务逻辑 ----------------
 
@@ -636,13 +758,24 @@ class GamePage(QWidget):
     def update_voice_status(self, msg):
         """更新小字或错误提示"""
         self.append_log(f"语音系统: {msg}")
-        if "无法识别" in msg:
-            self.voice_status_main.setText("识别失败或走法有误")
-            self.voice_status_main.setStyleSheet("color: #f39c12;")
+        
+        # 只要 msg 包含以下关键词，说明一次“意图解析”尝试已经结束，不论成功还是失败
+        # 失败的情况需要重置按钮
+        error_keywords = ["失败", "异常", "不合规", "格式不对", "有误", "无法识别"]
+        
+        if any(key in msg for key in error_keywords):
+            self.record_btn.setText("🎤 重新录音")
+            self.record_btn.setEnabled(True)
+            self.record_btn.setStyleSheet("background-color: #3498db; color: white; border-radius: 15px;")
+            self.voice_status_main.setText("解析失败")
+            self.voice_status_main.setStyleSheet("color: #e67e22;") # 橙色提醒
 
     @Slot(str)
     def on_voice_move_detected(self, uci):
         """识别成功后的处理"""
+        self.record_btn.setText("🎤 开始录音")
+        self.record_btn.setEnabled(True)
+        self.record_btn.setStyleSheet("background-color: #3498db; color: white; border-radius: 15px;")
         self.voice_status_main.setText("识别成功")
         self.voice_status_main.setStyleSheet("color: #27ae60;")
         self.voice_partial_label.setText(f"已发送指令: {uci}")
