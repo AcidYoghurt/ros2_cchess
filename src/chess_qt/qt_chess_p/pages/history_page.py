@@ -50,10 +50,14 @@ class StepReviewThread(QThread):
     def run(self):
         try:
             system_prompt = (
-                "你是一位中国象棋教练。"
+                "你是一位中国象棋大师。"
                 "我会给你完整对局招法。请从第6步开始逐步点评每一步。"
                 "每一步必须给 verdict(好/可行/不好)、reason、suggestion。"
                 "如果 verdict 是 好，则 suggestion 为空字符串。"
+                "如果 verdict 是 可行或不好，请提供具体的改进建议，包括："
+                "1. 具体建议走什么棋子"
+                "2. 走到哪里（使用标准的中国象棋记谱法）"
+                "3. 为什么这样走（详细的理由，包括战略意图、子力配合等）"
                 "只输出 JSON，不要输出任何额外文字。"
             )
             numbered_moves = "\n".join(f"{idx + 1}. {mv}" for idx, mv in enumerate(self.move_list))
@@ -64,15 +68,15 @@ class StepReviewThread(QThread):
                 "    {\n"
                 '      "step": 6,\n'
                 '      "verdict": "好|可行|不好",\n'
-                '      "reason": "简要原因",\n'
-                '      "suggestion": "如果不是好，给出建议走法；如果是好则为空字符串"\n'
+                '      "reason": "详细原因，包括战略意图和子力配合分析",\n'
+                '      "suggestion": "如果不是好，给出具体建议：走什么棋子，走到哪里，为什么这样走；如果是好则为空字符串"\n'
                 "    }\n"
                 "  ]\n"
                 "}\n\n"
                 "规则：\n"
                 "- step 从 1 开始，对应第 N 个招法。\n"
                 "- 只返回第6步到最后一步。\n"
-                "- reason 和 suggestion 使用简体中文。\n\n"
+                "- reason 和 suggestion 使用简体中文，详细且专业。\n\n"
                 f"招法列表：\n{numbered_moves}"
             )
 
@@ -675,7 +679,7 @@ class HistoryPage(QWidget):
             self.step_review_box.setMarkdown("当前是起始局面，暂无点评。")
             return
         if self.current_step <= 5:
-            self.step_review_box.setMarkdown(f"第 {self.current_step} 步属于前五步，按规则不显示点评。")
+            self.step_review_box.setMarkdown(f"前五步不进行点评。")
             return
         if self.step_review_loading:
             self.step_review_box.setMarkdown("AI 正在逐步复盘，请稍候...")

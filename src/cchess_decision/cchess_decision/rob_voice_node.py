@@ -70,6 +70,113 @@ class VoiceGameNode(Node):
             candidate = compact[i:i + 4]
             if re.fullmatch(r'[a-i][0-9][a-i][0-9]', candidate):
                 return candidate
+        
+        # 尝试解析带方向的指令
+        direction_move = self.parse_direction_move(text)
+        if direction_move:
+            return direction_move
+        
+        return None
+    
+    def parse_direction_move(self, text):
+        """解析带方向的指令，如"右边的炮向左移动2步"""
+        # 棋子类型映射
+        piece_map = {
+            '炮': 'c', '车': 'r', '马': 'n', '相': 'b', '士': 'a', '帅': 'k', '兵': 'p'
+        }
+        
+        # 方向映射（红方视角）
+        direction_map = {
+            '左': 'left', '右': 'right', '前': 'forward', '后': 'backward'
+        }
+        
+        # 提取棋子类型
+        piece_type = None
+        for key in piece_map:
+            if key in text:
+                piece_type = piece_map[key]
+                break
+        if not piece_type:
+            return None
+        
+        # 提取方向
+        direction = None
+        for key in direction_map:
+            if key in text:
+                direction = direction_map[key]
+                break
+        if not direction:
+            return None
+        
+        # 提取步数
+        step_match = re.search(r'(\d+)步', text)
+        if not step_match:
+            return None
+        steps = int(step_match.group(1))
+        
+        # 提取位置描述（如"右边的"）
+        position_desc = None
+        if '左边的' in text:
+            position_desc = 'left'
+        elif '右边的' in text:
+            position_desc = 'right'
+        elif '前面的' in text:
+            position_desc = 'front'
+        elif '后面的' in text:
+            position_desc = 'back'
+        
+        # 找到符合条件的红方棋子
+        candidate_pieces = []
+        for square in cchess.SQUARES:
+            piece = self.board.piece_at(square)
+            if piece and piece.color == cchess.RED and piece.symbol().lower() == piece_type:
+                candidate_pieces.append((square, piece))
+        
+        if not candidate_pieces:
+            return None
+        
+        # 根据位置描述筛选棋子
+        if position_desc == 'left':
+            # 最左边的棋子（横坐标最小）
+            candidate_pieces.sort(key=lambda x: cchess.square_column(x[0]))
+        elif position_desc == 'right':
+            # 最右边的棋子（横坐标最大）
+            candidate_pieces.sort(key=lambda x: -cchess.square_column(x[0]))
+        elif position_desc == 'front':
+            # 最前面的棋子（纵坐标最大）
+            candidate_pieces.sort(key=lambda x: -cchess.square_row(x[0]))
+        elif position_desc == 'back':
+            # 最后面的棋子（纵坐标最小）
+            candidate_pieces.sort(key=lambda x: cchess.square_row(x[0]))
+        
+        # 取第一个符合条件的棋子
+        target_square = candidate_pieces[0][0]
+        from_col = cchess.square_column(target_square)
+        from_row = cchess.square_row(target_square)
+        
+        # 根据方向计算目标位置
+        to_col, to_row = from_col, from_row
+        if direction == 'left':
+            to_col = max(0, from_col - steps)
+        elif direction == 'right':
+            to_col = min(8, from_col + steps)
+        elif direction == 'forward':
+            to_row = min(9, from_row + steps)
+        elif direction == 'backward':
+            to_row = max(0, from_row - steps)
+        
+        # 转换为UCI格式
+        from_square = cchess.square(from_col, from_row)
+        to_square = cchess.square(to_col, to_row)
+        
+        # 检查移动是否合法
+        try:
+            move = cchess.Move(from_square, to_square)
+            if move in self.board.legal_moves:
+                return move.uci()
+        except Exception:
+            pass
+        
         return None
 
     def is_duplicate_command(self, fen_before, uci_move):
