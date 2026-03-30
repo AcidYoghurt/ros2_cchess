@@ -14,7 +14,7 @@
 
   ```bash
   ros2_cchess项目结构
-  ├── cchess_ros_control							# 执行与感知层
+  ├── cchess_control								# 执行与感知层
   │   ├── machinery_camera						# 视觉识别【未使用】
   │   │   ├── chess_corner_recognition			# 棋盘角点识别
   │   │   └── pub_camera							# 启动相机
@@ -26,7 +26,7 @@
   │       ├── machinery_hardware_interface	    # ros2_control中的hardware_interface
   │       ├── machinery_keyboard_control			# 键盘操操控机械臂
   │       └── machinery_ros2control_bringup		# 测试machinery_ros2control模块
-  ├── cchess_ros									# 决策层
+  ├── cchess_decision								# 决策层
   │       ├── resource	                        # 象棋引擎pikafish与象棋识别模型onnx
   │       ├── cchess_ros							# 相关决策节点
   │       ├── chess_camera.py						# 实际相机控制节点
@@ -52,7 +52,7 @@
 
 使用小鱼ROS一键安装：
 
-```bas
+```bash
 wget http://fishros.com/install -O fishros && . fishros
 ```
 

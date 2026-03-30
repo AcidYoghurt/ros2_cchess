@@ -1,0 +1,274 @@
+{
+  "reviews": [
+    {
+      "reason": "推进卒子可以增强己方的攻击力和控制力。",
+      "step": 6,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "虽然不太激进，但可以保持当前的阵势。",
+      "step": 7,
+      "suggestion": "可以考虑进攻其它子力，增强压力。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "象子进前可以帮助防守，并保护其他重要子力。",
+      "step": 8,
+      "suggestion": "可以考虑寻找更积极的进攻方式。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "改善了车的位置，增加了进攻选择。",
+      "step": 9,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "士进场可以加强对中间控制，保护后方。",
+      "step": 10,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "虽然有进攻潜力，但没有显著改善局面。",
+      "step": 11,
+      "suggestion": "可以考虑对敌方中心区域进行更直接的威胁。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "推进兵可以增加对敌方阵地的压力。",
+      "step": 12,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "提升兵的稳定性，但未能形成直接进攻。",
+      "step": 13,
+      "suggestion": "可以思考如何搭配其他子力形成威胁。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "继续推进卒子增强了对局面的控制。",
+      "step": 14,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "车的平移提供了新的攻击线路。",
+      "step": 15,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "马子的移动加强了对边线的控制。",
+      "step": 16,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "增加了兵的灵活性，但没有直接威胁敌方重要子力。",
+      "step": 17,
+      "suggestion": "考虑直接攻击敌方后排。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "炮子后退可以保全，但未有主动进攻。",
+      "step": 18,
+      "suggestion": "应寻找机会发动更具威胁性的进攻。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "车子退回保持阵型，但可能浪费了一步进攻机会。",
+      "step": 19,
+      "suggestion": "考虑给对方施加更大压力，增加攻击机会。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "马子进攻可能提高威胁，但有可能被敌方反击。",
+      "step": 20,
+      "suggestion": "应当考虑其他替代进攻路线。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "清晰地增强了对敌方车的压制。",
+      "step": 21,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "炮的移动为后续进攻提供了新的视野。",
+      "step": 22,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "虽然移动了兵，但没有明显的进攻意义。",
+      "step": 23,
+      "suggestion": "可以考虑其他提升局势的方法。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "马的进攻改善了进攻的多样性，增加了对敌方的压力。",
+      "step": 24,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "炮的平移为中路开辟了更多的进攻机会。",
+      "step": 25,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "车的推进增强了对敌方阵地的控制。",
+      "step": 26,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "虽然提升了马的位置，但未能形成直接威胁。",
+      "step": 27,
+      "suggestion": "应考虑更具攻击性的走法。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "象前进进一步保护了重要子力，增强控制力。",
+      "step": 28,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "车的进攻方向有其合理性，但未能直接威胁。",
+      "step": 29,
+      "suggestion": "寻找对敌方重要子力的更直接威胁。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "车移动有助于后续的灵活应对，但缺乏强攻意图。",
+      "step": 30,
+      "suggestion": "考虑对对方进行集中打击。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "马的进攻略显疲软，未能有效威胁敌人。",
+      "step": 31,
+      "suggestion": "其他子力也可参与攻击。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "炮子进攻为后续的攻击准备了机会。",
+      "step": 32,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "回退车子保持稳定，但未能加强攻势。",
+      "step": 33,
+      "suggestion": "应当利用本身优势进行反攻。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "炮的推进有效增大了攻击范围。",
+      "step": 34,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "仕子进攻增加了防守的稳定性。",
+      "step": 35,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "车的移动保持了阵型，但未显著提升进攻威胁。",
+      "step": 36,
+      "suggestion": "考虑在敌方阵地施加更大的压力。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "车的前进为后续攻击做了准备。",
+      "step": 37,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "车子位置调换为后续的进攻提供了机会。",
+      "step": 38,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "车的平移为局面制造了更多的灵活性。",
+      "step": 39,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "车子推进至敌方阵营，增强了进攻可能性。",
+      "step": 40,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "马的进军提高了对边线的控制，未对中央形成直接威胁。",
+      "step": 41,
+      "suggestion": "探索更全面的进攻方案。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "炮的平移维持了局面，但未有效推进战斗。",
+      "step": 42,
+      "suggestion": "考虑直接攻击敌方的核心子力。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "良好地利用了子力向敌方施压。",
+      "step": 43,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "车子平移动作合理，但未形成直接威胁。",
+      "step": 44,
+      "suggestion": "寻找可施加更大压力的位置。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "车的移动保持局面稳定，但进攻性不足。",
+      "step": 45,
+      "suggestion": "积极寻找对敌方攻击的机会。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "后车的移动进一步增强局势的压迫感。",
+      "step": 46,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "车子的进攻策略合理，但未构成有效威胁。",
+      "step": 47,
+      "suggestion": "探索对敌方重要位置的直接攻击。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "后车的平移为战局调整提供了可能性。",
+      "step": 48,
+      "suggestion": "考虑更有攻击性的走法。",
+      "verdict": "可行"
+    },
+    {
+      "reason": "帅子进攻有助于提升整体阵型的协调性。",
+      "step": 49,
+      "suggestion": "",
+      "verdict": "好"
+    },
+    {
+      "reason": "车的退回保持了周全的防守，未能起到进攻的作用。",
+      "step": 50,
+      "suggestion": "应考虑向敌方施加压力的方式。",
+      "verdict": "可行"
+    }
+  ]
+}

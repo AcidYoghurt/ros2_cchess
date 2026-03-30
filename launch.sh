@@ -1,5 +1,13 @@
 #!/bin/bash
-#conda activate ros2_cchess
+
+unset http_proxy
+unset https_proxy
+unset all_proxy
+unset HTTP_PROXY
+unset HTTPS_PROXY
+unset ALL_PROXY
+
+conda activate ros2_cchess
 source /opt/ros/humble/setup.bash
 source install/setup.bash 
 python3 src/chess_qt/qt_chess_p/main.py 
