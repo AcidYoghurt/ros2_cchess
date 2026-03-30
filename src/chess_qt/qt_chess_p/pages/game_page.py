@@ -800,6 +800,15 @@ class GamePage(QWidget):
             if self.is_voice_mode and hasattr(self, 'voice_thread'):
                 self.voice_thread.current_fen = fen
             self.append_log("棋盘已同步")
+            
+            # 检查当前是否是红方的回合，如果是，更新UI状态
+            if self.is_voice_mode and self.board.turn == cchess.RED:
+                self.record_btn.setText("🎤 开始录音")
+                self.record_btn.setEnabled(True)
+                self.record_btn.setStyleSheet("background-color: #3498db; color: white; border-radius: 15px;")
+                self.voice_status_main.setText("轮到你了，请开始录音")
+                self.voice_status_main.setStyleSheet("color: #3498db;") # 蓝色
+                self.voice_partial_label.setText("准备就绪，请说话...")
 
     def update_time_display(self):
         if self.is_timing and self.start_time:
