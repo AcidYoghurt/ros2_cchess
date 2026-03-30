@@ -60,7 +60,10 @@ class SettingsPage(QWidget):
         scroll.setWidget(content)
         layout = QVBoxLayout(content)
         layout.setContentsMargins(60, 50, 60, 50)
-        layout.setSpacing(40)
+        layout.setSpacing(60)  # 增加间距，使UI元素分布更均匀
+
+        # 添加顶部空白，使标题不紧贴顶部
+        layout.addStretch(1)
 
         # ===== 页面标题 =====
         titles = {
@@ -73,6 +76,9 @@ class SettingsPage(QWidget):
         title.setFont(QFont("Microsoft YaHei", 32, QFont.Bold))
         layout.addWidget(title)
 
+        # 添加标题和内容之间的间距
+        layout.addStretch(2)
+
         # ===== 核心配置区 =====
         if self.game_mode == "VOICE_AI":
             # 语音模式：仅显示黑方难度，玩家固定为红方
@@ -82,9 +88,14 @@ class SettingsPage(QWidget):
         else:
             self._build_human_ai_settings(layout)
 
+        # 添加内容和按钮之间的间距
+        layout.addStretch(3)
+
         # ===== 底部公共按钮 =====
         self._build_common_actions(layout)
-        layout.addStretch()
+        
+        # 添加底部空白，使按钮不紧贴底部
+        layout.addStretch(2)
 
     def _build_voice_settings(self, layout):
         group = QGroupBox("黑方 AI 难度 (对手)")
@@ -108,6 +119,8 @@ class SettingsPage(QWidget):
         side_group = QGroupBox("选择您的阵营")
         side_group.setFont(QFont("Microsoft YaHei", 22, QFont.Bold))
         side_layout = QHBoxLayout(side_group)
+        side_layout.setContentsMargins(40, 50, 40, 50)  # 增加组框内部间距
+        side_layout.setSpacing(30)  # 增加按钮之间的间距
         self.side_buttons = QButtonGroup(self)
         
         self.red_btn = QPushButton("红方")
@@ -124,6 +137,8 @@ class SettingsPage(QWidget):
         diff_group = QGroupBox("AI 难度")
         diff_group.setFont(QFont("Microsoft YaHei", 22, QFont.Bold))
         diff_layout = QHBoxLayout(diff_group)
+        diff_layout.setContentsMargins(40, 50, 40, 50)  # 增加组框内部间距
+        diff_layout.setSpacing(30)  # 增加按钮之间的间距
         self.diff_buttons = QButtonGroup(self)
         for i, lvl in enumerate(["入门", "进阶", "大师"]):
             btn = QPushButton(lvl); btn.setCheckable(True)
