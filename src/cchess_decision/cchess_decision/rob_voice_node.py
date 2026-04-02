@@ -8,6 +8,10 @@ import time
 class VoiceGameNode(Node):
     UCI_DIRECT_PATTERN = re.compile(r'\b([a-i][0-9][a-i][0-9])\b', re.IGNORECASE)
     UCI_PAIR_PATTERN = re.compile(r'([a-i][0-9])\s*[,，\-\s>]*\s*([a-i][0-9])', re.IGNORECASE)
+    CHINESE_NUM_MAP = {
+        "一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5,
+        "六": 6, "七": 7, "八": 8, "九": 9
+    }
 
     def __init__(self):
         super().__init__('voice_game_node')
@@ -36,6 +40,8 @@ class VoiceGameNode(Node):
         self.repeat_window_sec = float(self.get_parameter('voice_repeat_window_sec').value)
         self.last_command_key = ""
         self.last_command_time = 0.0
+        # 语音模式下固定按玩家（红方）视角理解“左右前后”
+        self.voice_player_color = cchess.RED
 
 
     def fen_sync_callback(self, msg):
@@ -84,12 +90,7 @@ class VoiceGameNode(Node):
         piece_map = {
             '炮': 'c', '车': 'r', '马': 'n', '相': 'b', '士': 'a', '帅': 'k', '兵': 'p'
         }
-        
-        # 方向映射（红方视角）
-        direction_map = {
-            '左': 'left', '右': 'right', '前': 'forward', '后': 'backward'
-        }
-        
+
         # 提取棋子类型
         piece_type = None
         for key in piece_map:
@@ -98,86 +99,140 @@ class VoiceGameNode(Node):
                 break
         if not piece_type:
             return None
-        
-        # 提取方向
-        direction = None
-        for key in direction_map:
-            if key in text:
-                direction = direction_map[key]
-                break
+
+        # 位置描述用于“选哪一个同类棋子”
+        position_desc = self.extract_position_desc(text)
+        # 行棋方向用于“往哪里走”
+        direction = self.extract_action_direction(text)
+        steps = self.extract_steps(text)
+
         if not direction:
             return None
-        
-        # 提取步数
-        step_match = re.search(r'(\d+)步', text)
-        if not step_match:
+        if steps is None:
             return None
-        steps = int(step_match.group(1))
-        
-        # 提取位置描述（如"右边的"）
-        position_desc = None
-        if '左边的' in text:
-            position_desc = 'left'
-        elif '右边的' in text:
-            position_desc = 'right'
-        elif '前面的' in text:
-            position_desc = 'front'
-        elif '后面的' in text:
-            position_desc = 'back'
-        
-        # 找到符合条件的红方棋子
+
+        # 找到符合条件的玩家棋子（语音模式固定红方）
         candidate_pieces = []
         for square in cchess.SQUARES:
             piece = self.board.piece_at(square)
-            if piece and piece.color == cchess.RED and piece.symbol().lower() == piece_type:
+            if piece and piece.color == self.voice_player_color and piece.symbol().lower() == piece_type:
                 candidate_pieces.append((square, piece))
-        
+
         if not candidate_pieces:
             return None
-        
-        # 根据位置描述筛选棋子
-        if position_desc == 'left':
-            # 最左边的棋子（横坐标最小）
-            candidate_pieces.sort(key=lambda x: cchess.square_column(x[0]))
-        elif position_desc == 'right':
-            # 最右边的棋子（横坐标最大）
-            candidate_pieces.sort(key=lambda x: -cchess.square_column(x[0]))
-        elif position_desc == 'front':
-            # 最前面的棋子（纵坐标最大）
-            candidate_pieces.sort(key=lambda x: -cchess.square_row(x[0]))
-        elif position_desc == 'back':
-            # 最后面的棋子（纵坐标最小）
-            candidate_pieces.sort(key=lambda x: cchess.square_row(x[0]))
-        
+
+        # 根据“左边的/右边的/前面的/后面的”筛选同类棋子
+        if position_desc:
+            candidate_pieces.sort(
+                key=lambda x: self.viewer_position_rank(
+                    x[0], position_desc, self.voice_player_color
+                )
+            )
+
         # 取第一个符合条件的棋子
         target_square = candidate_pieces[0][0]
-        from_col = cchess.square_column(target_square)
-        from_row = cchess.square_row(target_square)
-        
-        # 根据方向计算目标位置
-        to_col, to_row = from_col, from_row
-        if direction == 'left':
-            to_col = max(0, from_col - steps)
-        elif direction == 'right':
-            to_col = min(8, from_col + steps)
-        elif direction == 'forward':
-            to_row = min(9, from_row + steps)
-        elif direction == 'backward':
-            to_row = max(0, from_row - steps)
-        
-        # 转换为UCI格式
-        from_square = cchess.square(from_col, from_row)
-        to_square = cchess.square(to_col, to_row)
-        
-        # 检查移动是否合法
-        try:
-            move = cchess.Move(from_square, to_square)
-            if move in self.board.legal_moves:
+        legal_from_moves = [m for m in self.board.legal_moves if m.from_square == target_square]
+        for move in legal_from_moves:
+            if self.match_direction_and_steps(move, direction, steps, self.voice_player_color):
                 return move.uci()
-        except Exception:
-            pass
-        
+
         return None
+
+    def extract_position_desc(self, text):
+        if any(token in text for token in ("左边的", "左边", "左侧的", "左侧")):
+            return "left"
+        if any(token in text for token in ("右边的", "右边", "右侧的", "右侧")):
+            return "right"
+        if any(token in text for token in ("前面的", "前面")):
+            return "front"
+        if any(token in text for token in ("后面的", "后面")):
+            return "back"
+        return None
+
+    def extract_action_direction(self, text):
+        """优先解析“向/往/朝 X”后的真实行棋方向，避免被“左边的/右边的”误导。"""
+        explicit_match = re.search(r'(?:向|往|朝)\s*([左右前后])', text)
+        if explicit_match:
+            return {
+                "左": "left",
+                "右": "right",
+                "前": "forward",
+                "后": "backward"
+            }.get(explicit_match.group(1))
+
+        # 兜底写法，如“左移两步/右移1步/前进3步/后退1步”
+        if re.search(r'左移|往左|向左', text):
+            return "left"
+        if re.search(r'右移|往右|向右', text):
+            return "right"
+        if re.search(r'前进|向前|往前|进', text):
+            return "forward"
+        if re.search(r'后退|向后|往后|退', text):
+            return "backward"
+        return None
+
+    def extract_steps(self, text):
+        step_match = re.search(r'([0-9一二两三四五六七八九])\s*步', text)
+        if not step_match:
+            return None
+        step_token = step_match.group(1)
+        if step_token.isdigit():
+            return int(step_token)
+        return self.CHINESE_NUM_MAP.get(step_token)
+
+    def viewer_position_rank(self, square, position_desc, viewer_color):
+        col = cchess.square_column(square)
+        row = cchess.square_row(square)
+        is_red_view = (viewer_color == cchess.RED)
+
+        if position_desc == "left":
+            return col if is_red_view else -col
+        if position_desc == "right":
+            return -col if is_red_view else col
+        if position_desc == "front":
+            return -row if is_red_view else row
+        if position_desc == "back":
+            return row if is_red_view else -row
+        return 0
+
+    def match_direction_and_steps(self, move, direction, steps, viewer_color):
+        from_col = cchess.square_column(move.from_square)
+        from_row = cchess.square_row(move.from_square)
+        to_col = cchess.square_column(move.to_square)
+        to_row = cchess.square_row(move.to_square)
+        delta_col = to_col - from_col
+        delta_row = to_row - from_row
+
+        # “移动N步”主要用于直线移动指令，先只匹配横/纵直线走法
+        if delta_col != 0 and delta_row != 0:
+            return False
+
+        is_red_view = (viewer_color == cchess.RED)
+        if direction == "left":
+            if is_red_view and delta_col >= 0:
+                return False
+            if not is_red_view and delta_col <= 0:
+                return False
+            return abs(delta_col) == steps
+        if direction == "right":
+            if is_red_view and delta_col <= 0:
+                return False
+            if not is_red_view and delta_col >= 0:
+                return False
+            return abs(delta_col) == steps
+        if direction == "forward":
+            if is_red_view and delta_row <= 0:
+                return False
+            if not is_red_view and delta_row >= 0:
+                return False
+            return abs(delta_row) == steps
+        if direction == "backward":
+            if is_red_view and delta_row >= 0:
+                return False
+            if not is_red_view and delta_row <= 0:
+                return False
+            return abs(delta_row) == steps
+        return False
 
     def is_duplicate_command(self, fen_before, uci_move):
         command_key = f"{fen_before}|{uci_move}"

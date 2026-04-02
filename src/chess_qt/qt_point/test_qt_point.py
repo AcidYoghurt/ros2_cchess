@@ -3,10 +3,10 @@ import os
 import pandas as pd
 import serial
 import time
-from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                             QHBoxLayout, QPushButton, QTableWidget, 
-                             QTableWidgetItem, QLabel, QMessageBox, QTabWidget, 
-                             QHeaderView, QLineEdit)
+from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
+                               QHBoxLayout, QPushButton, QTableWidget,
+                               QTableWidgetItem, QLabel, QMessageBox, QTabWidget,
+                               QHeaderView, QLineEdit)
 from PySide6.QtGui import QPixmap, QFont, QRegularExpressionValidator
 from PySide6.QtCore import Qt, QRegularExpression
 from ament_index_python.packages import get_package_share_directory
@@ -16,10 +16,10 @@ class RoboticArmEditor(QMainWindow):
         super().__init__()
         # 串口配置：请根据实际设备路径修改（如 /dev/ttyUSB0）
         self.config = {
-            "左机械臂 (Left)": {"path": os.path.join(get_package_share_directory("machinery_chess_bringup"),"config","machinery","left","position.csv"), "port": "/dev/machineryLeftA"},
-            "右机械臂 (Right)": {"path": os.path.join(get_package_share_directory("machinery_chess_bringup"),"config","machinery","right","position.csv"), "port": "/dev/machineryRightB"}
+            "左机械臂 (Left)": {"path": os.path.join(get_package_share_directory("machinery_chess_control_bringup"),"config","machinery","left","position.csv"), "port": "/dev/machineryLeftA"},
+            "右机械臂 (Right)": {"path": os.path.join(get_package_share_directory("machinery_chess_control_bringup"),"config","machinery","right","position.csv"), "port": "/dev/machineryRightB"}
         }
-        
+
         # 点位顺序序列
         self.point_sequence = []
         for r in range(9, -1, -1):
@@ -27,7 +27,7 @@ class RoboticArmEditor(QMainWindow):
                 self.point_sequence.append(f"{c}{r}")
         self.point_sequence.append("o0")
 
-        self.tables = {} 
+        self.tables = {}
         self.init_ui()
         self.reload_all_data()
 
@@ -56,23 +56,23 @@ class RoboticArmEditor(QMainWindow):
         # 2. 测试控制面板
         test_panel = QHBoxLayout()
         test_panel.addStretch()
-        
+
         # 回到原点按钮 (新加)
         self.btn_origin = QPushButton("🏠 回到原点")
         self.btn_origin.setFixedHeight(45)
         self.btn_origin.setStyleSheet("background-color: #455A64; color: white; padding: 0 15px;")
         self.btn_origin.clicked.connect(self.go_to_origin)
-        
+
         self.test_input = QLineEdit()
         self.test_input.setPlaceholderText("a9")
         self.test_input.setFixedWidth(80)
         self.test_input.setFixedHeight(45)
         self.test_input.setValidator(QRegularExpressionValidator(QRegularExpression("^(o0|[a-i][0-9])$")))
-        
+
         self.btn_test = QPushButton("🎯 测试当前点")
         self.btn_test.setFixedHeight(45)
         self.btn_test.clicked.connect(self.run_point_test)
-        
+
 
         self.btn_next = QPushButton("⏭️ 下一个点位")
         self.btn_next.setFixedHeight(45)
@@ -91,7 +91,7 @@ class RoboticArmEditor(QMainWindow):
         test_panel.addWidget(self.test_input)
         test_panel.addWidget(self.btn_test)
         test_panel.addWidget(self.btn_next)
-        test_panel.addWidget(self.btn_drop)   
+        test_panel.addWidget(self.btn_drop)
         test_panel.addStretch()
         main_layout.addLayout(test_panel)
 
@@ -177,7 +177,7 @@ class RoboticArmEditor(QMainWindow):
     def run_point_test(self):
         point_id = self.test_input.text().strip().lower()
         if not point_id: return
-        
+
         arm_name = self.tabs.tabText(self.tabs.currentIndex())
         port = self.config[arm_name]["port"]
         table = self.tables[arm_name]
@@ -187,7 +187,7 @@ class RoboticArmEditor(QMainWindow):
             if table.item(r, 0).text() == point_id:
                 target_row = r
                 break
-        
+
         if target_row != -1:
             table.selectRow(target_row)
             table.scrollToItem(table.item(target_row, 0))
@@ -195,7 +195,7 @@ class RoboticArmEditor(QMainWindow):
                 x = table.item(target_row, 1).text()
                 y = table.item(target_row, 2).text()
                 z = float(table.item(target_row, 3).text())
-                
+
                 real_z = z + (170 if point_id == "o0" else 15)
                 cmd = f"DescartesPoint_{x},{y},{real_z},30\r\n"
                 self.send_serial(port, cmd)
@@ -315,12 +315,12 @@ class RoboticArmEditor(QMainWindow):
         """当用户关闭窗口时触发"""
         # 创建一个询问对话框
         reply = QMessageBox.question(
-            self, 
-            '确认退出', 
+            self,
+            '确认退出',
             "您有未保存的更改吗？建议在退出前保存所有点位数据。\n\n是否直接退出？",
-            QMessageBox.StandardButton.Save | 
-            QMessageBox.StandardButton.Discard | 
-            QMessageBox.StandardButton.Cancel, 
+            QMessageBox.StandardButton.Save |
+            QMessageBox.StandardButton.Discard |
+            QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Cancel
         )
 

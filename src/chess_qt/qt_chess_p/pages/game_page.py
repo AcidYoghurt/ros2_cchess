@@ -10,6 +10,7 @@ import pyaudio
 import dashscope
 import difflib
 from dashscope.audio.asr import Recognition, RecognitionCallback, RecognitionResult
+from dashscope.common.error import InvalidParameter
 
 from PySide6.QtCore import (
     Qt, Signal, Slot, QTimer, QEvent, QThread,
@@ -39,10 +40,37 @@ class VoiceRecognitionThread(QThread):
         self._is_running = False
         self.current_fen = ""
         self.full_transcript = "" # 新增：用于记录本轮录音的所有文字
+        self._fatal_asr_error = None
+
+    @staticmethod
+    def _normalize_text(value):
+        return str(value or "").strip()
+
+    def _classify_asr_error(self, status_code, code, message):
+        """返回 (is_fatal, user_message)。fatal 表示不可重试，应停止自动重连。"""
+        status = self._normalize_text(status_code)
+        code_text = self._normalize_text(code)
+        msg_text = self._normalize_text(message)
+        merged = f"{code_text} {msg_text}".lower()
+
+        # 不可恢复：鉴权/权限/额度/限流等
+        fatal_status = {"401", "402", "403", "429"}
+        fatal_keywords = [
+            "quota", "token", "balance", "billing", "bill", "arrear", "insufficient",
+            "exceed", "exhaust", "forbidden", "unauthorized", "permission denied",
+            "欠费", "余额", "额度", "配额", "鉴权", "权限", "超限", "耗尽"
+        ]
+        is_fatal = status in fatal_status or any(k in merged for k in fatal_keywords)
+
+        details = f"(status={status or 'unknown'}, code={code_text or 'unknown'})"
+        if is_fatal:
+            return True, f"语音识别不可用 {details}: {msg_text or '可能是 Token/余额/权限问题，请检查 DashScope 控制台。'}"
+        return False, f"语音会话异常 {details}: {msg_text or '网络或服务波动，正在自动重连...'}"
 
     def run(self):
         self._is_running = True
-        self.full_transcript = "" 
+        self.full_transcript = ""
+        self._fatal_asr_error = None
         
         class ASRCallback(RecognitionCallback):
             def __init__(self, outer):
@@ -57,28 +85,111 @@ class VoiceRecognitionThread(QThread):
                         # 始终记录最新的识别内容
                         self.outer.full_transcript = text
 
-        callback = ASRCallback(self)
-        recognition = Recognition(model='paraformer-realtime-v1', format='pcm', 
-                                  sample_rate=16000, callback=callback)
-        recognition.start()
+            def on_error(self, result: RecognitionResult):
+                status_code = getattr(result, "status_code", None)
+                code = getattr(result, "code", "")
+                message = getattr(result, "message", "")
+                is_fatal, user_msg = self.outer._classify_asr_error(status_code, code, message)
+                self.outer.status_signal.emit(user_msg)
+                if is_fatal:
+                    self.outer._fatal_asr_error = user_msg
+                    self.outer._is_running = False
 
-        p = pyaudio.PyAudio()
-        stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=3200)
-        
+        callback = ASRCallback(self)
+        recognition = None
+        p = None
+        stream = None
+        reconnecting = False
+        last_reconnect_ts = 0.0
+
+        def start_recognition_session():
+            rec = Recognition(
+                model='paraformer-realtime-v1',
+                format='pcm',
+                sample_rate=16000,
+                callback=callback
+            )
+            rec.start()
+            return rec
+
         try:
+            recognition = start_recognition_session()
+
+            p = pyaudio.PyAudio()
+            stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=3200)
+
             while self._is_running:
+                if self._fatal_asr_error:
+                    break
+
                 data = stream.read(3200, exception_on_overflow=False)
-                if data:
+                if not data:
+                    continue
+
+                if recognition is None:
+                    if self._fatal_asr_error:
+                        break
+                    now = time.time()
+                    if now - last_reconnect_ts < 1.0:
+                        continue
+                    last_reconnect_ts = now
+                    try:
+                        recognition = start_recognition_session()
+                        if reconnecting:
+                            self.status_signal.emit("语音会话已恢复")
+                            reconnecting = False
+                    except Exception:
+                        if not reconnecting:
+                            self.status_signal.emit("语音会话中断，正在重连...")
+                            reconnecting = True
+                        continue
+
+                try:
                     recognition.send_audio_frame(data)
+                except InvalidParameter:
+                    # ASR 会话已停止时不要结束录音线程，尝试重连会话
+                    if self._fatal_asr_error:
+                        break
+                    try:
+                        recognition.stop()
+                    except Exception:
+                        pass
+                    recognition = None
+                    if not reconnecting:
+                        self.status_signal.emit("语音会话中断，正在重连...")
+                        reconnecting = True
+                    continue
+        except Exception as e:
+            print(f"ASR Thread Error: {e}")
+            if not self._fatal_asr_error:
+                self.status_signal.emit("语音识别过程发生异常")
         finally:
-            recognition.stop()
-            stream.stop_stream()
-            stream.close()
-            p.terminate()
-            
+            if recognition is not None:
+                try:
+                    recognition.stop()
+                except InvalidParameter:
+                    pass
+                except Exception as e:
+                    print(f"ASR Stop Error: {e}")
+
+            if stream is not None:
+                try:
+                    stream.stop_stream()
+                    stream.close()
+                except Exception:
+                    pass
+
+            if p is not None:
+                try:
+                    p.terminate()
+                except Exception:
+                    pass
+
             # 线程停止后，如果刚才录到了话，立即交给 LLM 处理
             if self.full_transcript:
                 self.process_text_with_llm(self.full_transcript)
+            else:
+                self.finished_signal.emit()
 
     def process_text_with_llm(self, natural_text):
         try:
@@ -176,6 +287,8 @@ class ChessVisualizer(QWidget):
     def __init__(self):
         super().__init__()
         self.player_orientation = cchess.RED  # 默认红方在下
+        self._current_fen = None
+        self._base_pixmap = QPixmap()
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -201,15 +314,38 @@ class ChessVisualizer(QWidget):
 
     def set_orientation(self, color_str):
         """设置棋盘视角：RED 或 BLACK"""
+        old_orientation = self.player_orientation
         if color_str.upper() == "BLACK":
             self.player_orientation = cchess.BLACK
         else:
             self.player_orientation = cchess.RED
 
+        # 视角变化时需要重建原始棋盘图
+        if self._current_fen and self.player_orientation != old_orientation:
+            self._rebuild_base_pixmap()
+            self._apply_scaled_pixmap()
+
     def update_board(self, fen_str):
-        """使用 SVG → PNG 渲染棋盘（稳定方案）"""
+        """更新棋盘数据，并按当前可用空间显示。"""
+        self._current_fen = fen_str
+        self._rebuild_base_pixmap()
+        self._apply_scaled_pixmap()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        # 首次显示时延迟一帧重绘，确保布局尺寸稳定。
+        QTimer.singleShot(0, self._apply_scaled_pixmap)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._apply_scaled_pixmap()
+
+    def _rebuild_base_pixmap(self):
+        """根据 FEN 渲染高分辨率棋盘原图，不依赖当前控件尺寸。"""
+        if not self._current_fen:
+            return
         try:
-            board = cchess.Board(fen_str)
+            board = cchess.Board(self._current_fen)
 
             # 尝试获取上一步（用于高亮）
             last_move = None
@@ -220,7 +356,7 @@ class ChessVisualizer(QWidget):
 
             svg_content = cchess.svg.board(
                 board=board,
-                size=1200,                     # 用大尺寸避免细线丢失
+                size=1200,  # 用大尺寸避免细线丢失
                 coordinates=True,
                 axes_type=1,
                 lastmove=last_move,
@@ -229,26 +365,32 @@ class ChessVisualizer(QWidget):
                 style="#board{fill:#f3e5ab; stroke:#5d4037}"
             )
 
-            # SVG → PNG
-            png_bytes = cairosvg.svg2png(
-                bytestring=svg_content.encode("utf-8")
-            )
-
+            png_bytes = cairosvg.svg2png(bytestring=svg_content.encode("utf-8"))
             pixmap = QPixmap()
-            pixmap.loadFromData(png_bytes)
-
-            # 根据 QLabel 大小自适应
-            pixmap = pixmap.scaled(
-                self.board_label.size(),
-                Qt.KeepAspectRatio,
-                Qt.SmoothTransformation
-            )
-
-            self.board_label.setPixmap(pixmap)
-
+            if not pixmap.loadFromData(png_bytes):
+                raise ValueError("QPixmap.loadFromData 失败")
+            self._base_pixmap = pixmap
+            self.board_label.clear()
         except Exception as e:
             print(f"棋盘渲染错误: {e}")
+            self._base_pixmap = QPixmap()
             self.board_label.setText("棋盘渲染失败")
+
+    def _apply_scaled_pixmap(self):
+        """按 board_label 当前尺寸缩放并显示棋盘。"""
+        if self._base_pixmap.isNull():
+            return
+
+        target_size = self.board_label.size()
+        if target_size.width() <= 1 or target_size.height() <= 1:
+            return
+
+        scaled_pixmap = self._base_pixmap.scaled(
+            target_size,
+            Qt.KeepAspectRatio,
+            Qt.SmoothTransformation
+        )
+        self.board_label.setPixmap(scaled_pixmap)
 
 
 # ================= 自定义消息框 =================
@@ -761,7 +903,10 @@ class GamePage(QWidget):
         
         # 只要 msg 包含以下关键词，说明一次“意图解析”尝试已经结束，不论成功还是失败
         # 失败的情况需要重置按钮
-        error_keywords = ["失败", "异常", "不合规", "格式不对", "有误", "无法识别"]
+        error_keywords = [
+            "失败", "异常", "不合规", "格式不对", "有误", "无法识别",
+            "不可用", "token", "余额", "额度", "权限", "鉴权"
+        ]
         
         if any(key in msg for key in error_keywords):
             self.record_btn.setText("🎤 重新录音")
