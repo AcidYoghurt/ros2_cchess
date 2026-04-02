@@ -86,7 +86,7 @@ rosdep install -r --from-paths src --ignore-src --rosdistro $ROS_DISTRO -y
 # 安装python依赖
 sudo apt install python3-pip
 sudo apt install -y portaudio19-dev
-pip install onnxruntime PySide6 pyaudio vosk openai
+pip install "numpy<2" onnxruntime PySide6 pyaudio vosk openai
 ```
 
 ### 2.5 编译项目
